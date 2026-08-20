@@ -38,3 +38,23 @@ jobs:
         env:
           # To report GitHub Actions status checks
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FIX_CSHARP: true
+          FIX_DOTNET_SLN_FORMAT_ANALYZERS: true
+          FIX_DOTNET_SLN_FORMAT_STYLE: true
+          FIX_DOTNET_SLN_FORMAT_WHITESPACE: true
+          # To reuse the same Super-linter configuration that you use in the
+          # lint job without duplicating it, see
+          # https://github.com/super-linter/super-linter/blob/main/docs/run-linter-locally.md#share-environment-variables-between-environments
+      - name: Commit and push linting fixes
+        # Run only on:
+        # - Pull requests
+        # - Not on the default branch
+        if: >
+          github.event_name == 'pull_request' &&
+          github.ref_name != github.event.repository.default_branch
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          branch: ${{ github.event.pull_request.head.ref || github.head_ref || github.ref }}
+          commit_message: "chore: fix linting issues"
+          commit_user_name: super-linter
+          commit_user_email: super-linter@super-linter.dev
