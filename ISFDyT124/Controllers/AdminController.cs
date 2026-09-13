@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using ISFDyT124.Data;
 using ISFDyT124.DTO;
 using ISFDyT124.Models;
@@ -235,18 +236,33 @@ namespace ISFDyT124.Controllers
             };
 
             _context.Usuarios.Add(usuario);
-            await _context.SaveChangesAsync();
 
-            if (selectedRoleId == 2 && model.SelectedCaMaIds != null)
+            try
             {
-                var materias = await _context
-                    .CarreraMaterias.Where(cm => model.SelectedCaMaIds.Contains(cm.CaMaId))
-                    .ToListAsync();
-                foreach (var cm in materias)
-                {
-                    usuario.CarreraMaterias.Add(cm);
-                }
                 await _context.SaveChangesAsync();
+
+                if (selectedRoleId == 2 && model.SelectedCaMaIds != null)
+                {
+                    var materias = await _context
+                        .CarreraMaterias.Where(cm => model.SelectedCaMaIds.Contains(cm.CaMaId))
+                        .ToListAsync();
+                    foreach (var cm in materias)
+                    {
+                        usuario.CarreraMaterias.Add(cm);
+                    }
+                    await _context.SaveChangesAsync();
+                }
+            }
+            catch (DbUpdateException)
+            {
+                // Red de seguridad: si algún dato inválido esquivó la validación del DTO
+                // y llegó hasta SQL Server, no dejar que reviente en pantalla sin explicar.
+                ModelState.AddModelError(
+                    string.Empty,
+                    "No se pudo guardar el usuario: revisá que todos los campos tengan un formato válido."
+                );
+                await CargarListasFormularioUsuarioAsync();
+                return View(model);
             }
 
             return RedirectToAction(nameof(UsuariosABM));
@@ -355,7 +371,40 @@ namespace ISFDyT124.Controllers
                 usuario.CarreraMaterias.Clear();
             }
 
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateException)
+            {
+                ModelState.AddModelError(
+                    string.Empty,
+                    "No se pudo guardar el usuario: revisá que todos los campos tengan un formato válido."
+                );
+                await CargarListasFormularioUsuarioAsync();
+                return View(model);
+            }
+
+            return RedirectToAction(nameof(UsuariosABM));
+        }
+
+        // Flujo manual de "Olvidé mi contraseña" (ticket 2.2): no hay envío de mails
+        // configurado, así que el Admin restablece la clave al valor por defecto (el DNI del
+        // usuario) — mismo criterio que un alta nueva — y el propio login ya fuerza el cambio
+        // de contraseña la próxima vez que ese usuario entre.
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UsuarioRestablecerContrasena(int id)
+        {
+            var usuario = await _context.Usuarios.FindAsync(id);
+            if (usuario == null)
+                return RedirectToAction(nameof(UsuariosABM));
+
+            usuario.UsContrasena = PasswordService.HashPassword(usuario.UsDni.ToString());
             await _context.SaveChangesAsync();
+
+            TempData["SuccessMessage"] =
+                $"Se restableció la contraseña de {usuario.UsApellido}, {usuario.UsNombre} — vuelve a ser su DNI.";
             return RedirectToAction(nameof(UsuariosABM));
         }
 
@@ -368,13 +417,32 @@ namespace ISFDyT124.Controllers
                 .Include(u => u.CarreraMaterias)
                 .FirstOrDefaultAsync(u => u.UsId == id);
 
-            if (usuario != null)
+            if (usuario == null)
+                return RedirectToAction(nameof(UsuariosABM));
+
+            // No dejar que un Admin se borre a sí mismo (se quedaría sin sesión válida
+            // en medio de la operación) ni borrar al último Admin que quede activo.
+            var idLogueado = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            if (usuario.UsId == idLogueado)
             {
-                usuario.CarreraMaterias.Clear();
-                _context.UsuarioRoles.RemoveRange(usuario.UsuarioRoles);
-                _context.Usuarios.Remove(usuario);
-                await _context.SaveChangesAsync();
+                TempData["ErrorMessage"] = "No podés eliminar tu propio usuario.";
+                return RedirectToAction(nameof(UsuariosABM));
             }
+
+            if (usuario.RoId == 1)
+            {
+                int cantidadAdmins = await _context.Usuarios.CountAsync(u => u.RoId == 1);
+                if (cantidadAdmins <= 1)
+                {
+                    TempData["ErrorMessage"] = "No se puede eliminar al último Admin del sistema.";
+                    return RedirectToAction(nameof(UsuariosABM));
+                }
+            }
+
+            usuario.CarreraMaterias.Clear();
+            _context.UsuarioRoles.RemoveRange(usuario.UsuarioRoles);
+            _context.Usuarios.Remove(usuario);
+            await _context.SaveChangesAsync();
 
             return RedirectToAction(nameof(UsuariosABM));
         }

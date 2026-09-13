@@ -11,7 +11,7 @@ namespace ISFDyT124.Models
         [Required(ErrorMessage = "Debe ingresar el nombre de la materia.")]
         [StringLength(100, ErrorMessage = "No se permiten más de 100 caracteres.")]
         [RegularExpression(
-            @"^[A-Za-zÁÉÍÓÚáéíóúÜüÑñ0-9\s.,()-]*$",
+            @"^[A-Za-zÁÉÍÓÚáéíóúÜüÑñ\s.,()-]*$",
             ErrorMessage = "Ingrese una materia válida."
         )]
         [Display(Name = "Materia")]
@@ -32,6 +32,12 @@ namespace ISFDyT124.Models
         [Range(1, 4, ErrorMessage = "La cantidad de módulos debe estar entre 1 y 4.")]
         [Display(Name = "Cantidad de Módulos")]
         public int? MaCantModulos { get; set; }
+
+        // Porcentaje mínimo de asistencia que necesita un alumno para regularizar la materia.
+        [Required(ErrorMessage = "Debe ingresar el porcentaje mínimo de asistencia.")]
+        [Range(0, 100, ErrorMessage = "El porcentaje debe estar entre 0 y 100.")]
+        [Display(Name = "% Asistencia Mínima")]
+        public int? MaPorcentajeAsistenciaMinima { get; set; }
 
         // RELACION
         public virtual ICollection<CarreraMateria>? CarreraMaterias { get; set; }

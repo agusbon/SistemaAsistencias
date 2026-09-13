@@ -31,14 +31,26 @@
 
             <div class="input-field">
                 <label asp-for="MaModalidad"></label>
-                <input asp-for="MaModalidad" placeholder="Ej: Presencial" autocomplete="off">
+                <select asp-for="MaModalidad">
+                    <option value="">-- Seleccione una modalidad --</option>
+                    <option value="Presencial">Presencial</option>
+                    <option value="Virtual">Virtual</option>
+                    <option value="Libre">Libre</option>
+                    <option value="Semipresencial">Semipresencial</option>
+                </select>
                 <span asp-validation-for="MaModalidad" class="text-danger"></span>
             </div>
 
-            <div class="input-field" style="grid-column: span 2;">
+            <div class="input-field">
                 <label asp-for="MaCantModulos"></label>
                 <input asp-for="MaCantModulos" type="number" min="1" max="4" placeholder="Ej: 2">
                 <span asp-validation-for="MaCantModulos" class="text-danger"></span>
+            </div>
+
+            <div class="input-field">
+                <label asp-for="MaPorcentajeAsistenciaMinima"></label>
+                <input asp-for="MaPorcentajeAsistenciaMinima" type="number" min="0" max="100" placeholder="Ej: 75">
+                <span asp-validation-for="MaPorcentajeAsistenciaMinima" class="text-danger"></span>
             </div>
 
             <div class="input-field" style="grid-column: span 2;">

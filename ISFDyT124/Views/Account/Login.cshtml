@@ -29,13 +29,13 @@
                         <line x1="12" y1="16" x2="12.01" y2="16"></line>
                     </svg>
                     <div class="alerta-texto">
-                        @Html.ValidationSummary(true, "")
+                        @Html.ValidationSummary(false, "")
                     </div>
                 </div>
             }
             <div class="input-group">
-                <label for="usuario">Usuario</label>
-                <input type="text" id="usuario" name="usuario" placeholder="Ingresá tu usuario" required>
+                <label for="usuario">DNI</label>
+                <input type="text" id="usuario" name="usuario" placeholder="Ingresá tu DNI" required>
             </div>
 
             <div class="input-group">
@@ -49,7 +49,7 @@
         </form>
 
         <div class="link-container">
-            <a href="recupero-contraseña.html" class="forgot-password">Olvidé mi contraseña</a>
+            <a asp-controller="Account" asp-action="RecuperoContrasena" class="forgot-password">Olvidé mi contraseña</a>
         </div>
     </div>
 

@@ -19,7 +19,12 @@ public class MateriasController : Controller
     // GET: MATERIAS
     public async Task<IActionResult> Index()
     {
-        return View(await _context.Materias.Include(m => m.CarreraMaterias).ToListAsync());
+        return View(
+            await _context
+                .Materias.Include(m => m.CarreraMaterias)
+                .OrderByDescending(m => m.MaId)
+                .ToListAsync()
+        );
     }
 
     // GET: MATERIAS/Details/5
@@ -50,7 +55,7 @@ public class MateriasController : Controller
     // POST: MATERIAS/Create
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create([Bind("MaDenominacion,MaModalidad,MaCantModulos")] Materia materia, int? CaId)
+    public async Task<IActionResult> Create([Bind("MaDenominacion,MaModalidad,MaCantModulos,MaPorcentajeAsistenciaMinima")] Materia materia, int? CaId)
     {
         if (ModelState.IsValid)
         {
@@ -98,7 +103,7 @@ public class MateriasController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(
         int? MaId,
-        [Bind("MaId,MaDenominacion, MaModalidad , MaCantModulos")] Materia materia
+        [Bind("MaId,MaDenominacion, MaModalidad , MaCantModulos, MaPorcentajeAsistenciaMinima")] Materia materia
     )
     {
         if (MaId != materia.MaId)

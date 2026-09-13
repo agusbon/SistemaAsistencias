@@ -52,8 +52,7 @@
     <nav class="sidebar" id="sidebarMenu">
         <ul class="sidebar-links">
             <li>
-                <span class="menu-arrow">➔</span>
-                <a asp-controller="Home" asp-action="Index">Inicio</a>
+                <a asp-controller="Home" asp-action="Index"><span class="menu-arrow">➔</span>Inicio</a>
             </li>
             @{
                 // El docente no debería caer directo en el calendario general (que no tiene
@@ -62,27 +61,24 @@
                 bool esDocente = User.Identity != null && User.Identity.IsAuthenticated && User.IsInRole("Docente");
             }
             <li>
-                <span class="menu-arrow">➔</span>
                 @if (esDocente)
                 {
-                    <a asp-controller="Profesor" asp-action="Index">Calendario</a>
+                    <a asp-controller="Profesor" asp-action="Index"><span class="menu-arrow">➔</span>Calendario</a>
                 }
                 else
                 {
-                    <a asp-controller="Asistencias" asp-action="AsistenciaGlobal">Calendario</a>
+                    <a asp-controller="Asistencias" asp-action="AsistenciaGlobal"><span class="menu-arrow">➔</span>Calendario</a>
                 }
             </li>
             @if (User.Identity != null && User.Identity.IsAuthenticated
                   && (User.IsInRole("Admin") || User.IsInRole("Dirección")))
             {
                 <li>
-                    <span class="menu-arrow">➔</span>
-                    <a asp-controller="Admin" asp-action="Index">Panel Admin</a>
+                    <a asp-controller="Admin" asp-action="Index"><span class="menu-arrow">➔</span>Panel Admin</a>
                 </li>
             }
             <li>
-                <span class="menu-arrow">➔</span>
-                <a asp-controller="Account" asp-action="Login">Cerrar Sesion</a>
+                <a asp-controller="Account" asp-action="Login"><span class="menu-arrow">➔</span>Cerrar Sesion</a>
             </li>
         </ul>
     </nav>

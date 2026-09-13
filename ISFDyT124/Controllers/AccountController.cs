@@ -27,6 +27,14 @@ namespace ISFDyT124.Controllers
             return View();
         }
 
+        // VISTA GET: "Olvidé mi contraseña" — el flujo es manual vía Admin (no hay envío
+        // de mails configurado en el proyecto), así que esta vista solo explica el paso a
+        // seguir en vez de simular un envío que no pasa a ningún lado.
+        public IActionResult RecuperoContrasena()
+        {
+            return View();
+        }
+
         // RECIBIR DATOS POST: Se ejecuta al enviar el formulario. Usamos el DTO por buenas prácticas.
         [HttpPost]
         public async Task<IActionResult> Login(UsuarioLoginDto model)

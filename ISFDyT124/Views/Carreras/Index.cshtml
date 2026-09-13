@@ -20,6 +20,11 @@
 
 <main class="main-container-global">
 
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="info-banner"><div class="info-col-left"><p class="info-bold">@TempData["SuccessMessage"]</p></div></div>
+    }
+
     <div class="toolbar-container">
         <div class="spacer"></div>
         <div class="add-btn-container">

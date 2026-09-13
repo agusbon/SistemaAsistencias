@@ -19,6 +19,15 @@
 
 <main class="main-container-global">
 
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="info-banner"><div class="info-col-left"><p class="info-bold">@TempData["SuccessMessage"]</p></div></div>
+    }
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="info-banner"><div class="info-col-left"><p class="info-bold">@TempData["ErrorMessage"]</p></div></div>
+    }
+
     <div class="toolbar-container" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
         <div>
             <a asp-controller="Admin" asp-action="CargaMasivaAlumnos" class="btn-carga-masiva" style="display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 500; background: #e0f2fe; color: #0369a1; border: 1px solid #7dd3fc;">
@@ -58,7 +67,10 @@
                                     <a asp-action="UsuarioEditar" asp-route-id="@item.UsId" class="icon-btn btn-edit" title="Editar">
                                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4Z"></path></svg>
                                     </a>
-                                    <form asp-action="UsuarioEliminar" asp-route-id="@item.UsId" method="post" style="display:inline;" onsubmit="return confirm('¿Está seguro de eliminar este usuario?');">
+                                    <form asp-action="UsuarioRestablecerContrasena" asp-route-id="@item.UsId" method="post" style="display:inline;" data-confirm-message="¿Restablecer la contraseña de @item.UsApellido, @item.UsNombre a su DNI?">
+                                        <button type="submit" class="icon-btn" style="border:none; background:none; cursor:pointer;" title="Restablecer contraseña">🔑</button>
+                                    </form>
+                                    <form asp-action="UsuarioEliminar" asp-route-id="@item.UsId" method="post" style="display:inline;" data-confirm-message="¿Está seguro de eliminar este usuario?">
                                         <button type="submit" class="icon-btn" style="border:none; background:none; cursor:pointer;" title="Eliminar">🗑️</button>
                                     </form>
                                 </div>

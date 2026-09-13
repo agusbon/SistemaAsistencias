@@ -36,6 +36,11 @@
         </div>
 
         <div class="input-field">
+            <label>@Html.DisplayNameFor(model => model.MaPorcentajeAsistenciaMinima)</label>
+            <input value="@(Model.MaPorcentajeAsistenciaMinima.HasValue ? Model.MaPorcentajeAsistenciaMinima + "%" : "-")" readonly>
+        </div>
+
+        <div class="input-field">
             <label>Carreras relacionadas</label>
             <input value="@(Model.CarreraMaterias?.Count ?? 0)" readonly>
         </div>
