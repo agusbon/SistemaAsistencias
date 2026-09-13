@@ -437,6 +437,10 @@
           <div class="edt-item"><span class="code">3.10</span><span class="name">Excepción de SQL no controlada al guardar con campo obligatorio vacío</span><span class="tag critico">Crítico</span></div>
           <div class="edt-item"><span class="code">3.11</span><span class="name">Cambiar rol Docente → Admin no limpia las materias asignadas</span><span class="tag mvp">MVP</span></div>
           <div class="edt-item"><span class="code">3.12</span><span class="name">Acepta valores de DNI excesivamente largos</span><span class="tag mvp">MVP</span></div>
+          <div class="edt-item"><span class="code">3.13</span><span class="name">Fallo de validación en alta de usuario colapsa la vista (ViewBag sin repoblar)</span><span class="tag critico">Crítico</span></div>
+          <div class="edt-item"><span class="code">3.14</span><span class="name">Permite Docente sin materia asignada / Estudiante sin carrera-cohorte</span><span class="tag mvp">MVP</span></div>
+          <div class="edt-item"><span class="code">3.15</span><span class="name">Select múltiple de "Materias Asignadas" ocupa demasiado espacio</span><span class="tag normal">Post-MVP</span></div>
+          <div class="edt-item"><span class="code">3.16</span><span class="name">Extender el límite de longitud a otros campos de texto, no solo DNI</span><span class="tag mvp">MVP</span></div>
         </div>
       </div>
 
@@ -470,6 +474,7 @@
           <div class="edt-item"><span class="code">5.8</span><span class="name">Tabla de alumnos sin estilo consistente</span><span class="tag normal">Post-MVP</span></div>
           <div class="edt-item"><span class="code">5.9</span><span class="name">Toma/consulta de asistencia accesible sin login</span><span class="tag critico">Crítico</span></div>
           <div class="edt-item"><span class="code">5.10</span><span class="name">Asistencia Global en blanco con una cátedra real</span><span class="tag critico">Crítico</span></div>
+          <div class="edt-item"><span class="code">5.11</span><span class="name">Falta cartel de confirmación al guardar asistencia</span><span class="tag normal">Post-MVP</span></div>
         </div>
       </div>
 
@@ -548,19 +553,19 @@
           </div>
         </div>
         <div class="gantt-row">
-          <div class="label"><span class="code">3.8–3.10</span>Validaciones + eliminar Admin + excepción SQL</div>
+          <div class="label"><span class="code">3.8–3.10 / 3.13</span>Validaciones + eliminar Admin + excepción SQL + ViewBag</div>
           <div class="track"><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
             <div class="bar critico" style="left:2%; width:19%;"></div>
           </div>
         </div>
         <div class="gantt-row">
-          <div class="label"><span class="code">3.11–3.12</span>Limpieza de materias + DNI largo</div>
+          <div class="label"><span class="code">3.11–3.12 / 3.14 / 3.16</span>Limpieza de materias + DNI largo + validaciones de negocio</div>
           <div class="track"><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
             <div class="bar" style="left:27%; width:22%;"></div>
           </div>
         </div>
         <div class="gantt-row">
-          <div class="label"><span class="code">3.5–3.7</span>Detalles de UI en alta de usuario</div>
+          <div class="label"><span class="code">3.5–3.7 / 3.15</span>Detalles de UI en alta de usuario</div>
           <div class="track"><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
             <div class="bar destacado" style="left:52%; width:23%;"></div>
           </div>
@@ -618,7 +623,7 @@
           </div>
         </div>
         <div class="gantt-row">
-          <div class="label"><span class="code">5.7 / 5.8</span>Estilos de la vista de asistencia</div>
+          <div class="label"><span class="code">5.7 / 5.8 / 5.11</span>Estilos de la vista de asistencia + cartel de guardado</div>
           <div class="track"><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
             <div class="bar destacado" style="left:52%; width:23%;"></div>
           </div>
@@ -826,6 +831,30 @@
             <td><span class="badge mvp">MVP</span></td>
           </tr>
           <tr>
+            <td class="code-cell">3.13</td>
+            <td><div class="wp-name">Alta de usuario colapsa por ViewBag sin repoblar</div><div class="deliverable">Hallazgo de testing — Cristian Meza</div></td>
+            <td>Ante cualquier fallo de validación (DNI duplicado, campos vacíos), la vista de alta de usuario colapsa al recargarse porque el controlador no repuebla los <code>ViewBag</code> de los desplegables (<code>CarreraCohortesList</code>, <code>CarreraMateriasList</code>) antes de devolver la vista con el error. Distinto de 3.10: ahí la excepción es de SQL al insertar, acá es un crash de Razor al renderizar los combos. El propio equipo de testing ya lo marcó como resuelto.</td>
+            <td><span class="badge critico">Crítico</span></td>
+          </tr>
+          <tr>
+            <td class="code-cell">3.14</td>
+            <td><div class="wp-name">Docente sin materia / Estudiante sin carrera-cohorte</div><div class="deliverable">Hallazgo de testing — Cristian Meza</div></td>
+            <td>El sistema permite guardar un usuario con rol Docente sin ninguna materia asignada, y crear un Estudiante dejando el campo Carrera/Cohorte en blanco. Falta hacer obligatoria esa selección según el rol elegido.</td>
+            <td><span class="badge mvp">MVP</span></td>
+          </tr>
+          <tr>
+            <td class="code-cell">3.15</td>
+            <td><div class="wp-name">Select múltiple de Materias Asignadas muy grande</div><div class="deliverable">Hallazgo de testing — Cristian Meza</div></td>
+            <td>Al elegir el rol Docente, el campo "Materias Asignadas" se renderiza como un <code>&lt;select multiple&gt;</code> HTML nativo que ocupa un espacio vertical excesivo en el formulario — mejorarlo con un componente más compacto (checkboxes, multi-select con buscador, etc.).</td>
+            <td><span class="badge normal">Post-MVP</span></td>
+          </tr>
+          <tr>
+            <td class="code-cell">3.16</td>
+            <td><div class="wp-name">Límite de longitud en otros campos de texto</div><div class="deliverable">Hallazgo de testing — Cristian Meza</div></td>
+            <td>Además del DNI (ítem 3.12), el sistema tampoco limita la longitud de otros campos de texto: se pudieron guardar cadenas excesivamente largas sin ninguna advertencia. Definir <code>[MaxLength]</code> razonables en el modelo para nombre, apellido, email, etc.</td>
+            <td><span class="badge mvp">MVP</span></td>
+          </tr>
+          <tr>
             <td class="code-cell">4.1</td>
             <td><div class="wp-name">Relación carrera–materia faltante</div></td>
             <td>Completar la relación que falta en la vista de Carrera/Materia (a confirmar con el equipo cuál falta exactamente al tomar la tarea).</td>
@@ -950,6 +979,12 @@
             <td><div class="wp-name">Asistencia Global en blanco</div><div class="deliverable">Hallazgo de auditoría visual — Gianna Branca</div></td>
             <td>Al pasarle un <code>CaMaId</code> de una cátedra con asistencias cargadas, <code>AsistenciaGlobal</code> devuelve la página completamente en blanco, sin cartel de error. Con la vista vacía (sin seleccionar cátedra) sí funciona.</td>
             <td><span class="badge critico">Crítico</span></td>
+          </tr>
+          <tr>
+            <td class="code-cell">5.11</td>
+            <td><div class="wp-name">Falta cartel al guardar asistencia</div><div class="deliverable">Hallazgo de testing — Florencia</div></td>
+            <td>Al guardar la asistencia de una cátedra no aparece ningún mensaje confirmando que se guardó correctamente — mismo tipo de falta que 4.11, pero en la pantalla de Asistencias.</td>
+            <td><span class="badge normal">Post-MVP</span></td>
           </tr>
           <tr>
             <td class="code-cell">6.1</td>

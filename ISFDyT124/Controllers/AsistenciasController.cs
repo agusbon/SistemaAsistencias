@@ -208,6 +208,7 @@ namespace ISFDyT124.Controllers
             }
 
             await _context.SaveChangesAsync();
+            TempData["SuccessMessage"] = "Las asistencias han sido guardadas correctamente.";
             return RedirectToAction(nameof(Index));
         }
 
