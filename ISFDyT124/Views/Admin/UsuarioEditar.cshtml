@@ -64,20 +64,19 @@
 
             <div id="materiasGroup" class="input-field" style="display:none;">
                 <label>Materias Asignadas</label>
-                <select name="selectedCaMaIds" multiple style="height:150px;" data-msg-required="Debe seleccionar al menos una materia para un Docente.">
+                <div id="materiasList" style="height:150px; overflow:auto; border:1px solid #e6e6e6; padding:8px;">
                     @foreach (var cm in ViewBag.CarreraMateriasList)
                     {
-                        if (materiasActuales.Contains(cm.CaMaId))
-                        {
-                            <option value="@cm.CaMaId" selected>@cm.Denominacion</option>
-                        }
-                        else
-                        {
-                            <option value="@cm.CaMaId">@cm.Denominacion</option>
-                        }
+                        int caMaId = (int)cm.CaMaId;
+                        bool estaAsignada = materiasActuales.Contains(caMaId);
+                        <label style="display:block; margin-bottom:6px;">
+                            <input type="checkbox" name="selectedCaMaIds" value="@caMaId" checked="@estaAsignada" />
+                            @cm.Denominacion
+                        </label>
                     }
-                </select>
+                </div>
                 @Html.ValidationMessage("SelectedCaMaIds", "", new { @class = "text-danger" })
+                <span id="selectedCaMaError" class="text-danger" style="display:none;"></span>
             </div>
 
             <div class="form-buttons">
@@ -93,7 +92,7 @@
     <script>
         var roleSelect = document.getElementById('selectedRoleId');
         var caCoIdSelect = document.getElementById('CaCoId');
-        var materiasSelect = document.querySelector('#materiasGroup select');
+        var materiasCheckboxes = document.querySelectorAll('#materiasList input[type=checkbox]');
 
         function toggleFields() {
             var val = parseInt(roleSelect.value);
@@ -102,11 +101,28 @@
 
             document.getElementById('carreraCohorteGroup').style.display = esEstudiante ? 'flex' : 'none';
             document.getElementById('materiasGroup').style.display = esDocente ? 'flex' : 'none';
-
             caCoIdSelect.required = esEstudiante;
-            materiasSelect.required = esDocente;
+
+            materiasCheckboxes.forEach(function (cb) { cb.required = false; });
+            if (esDocente && materiasCheckboxes.length > 0) {
+                materiasCheckboxes[0].required = true;
+            }
         }
         roleSelect.addEventListener('change', toggleFields);
         toggleFields();
+
+        document.getElementById('formEditarUsuario').addEventListener('submit', function (e) {
+            var val = parseInt(roleSelect.value);
+            var esDocente = val === 2;
+            if (esDocente) {
+                var checked = Array.from(document.querySelectorAll('#materiasList input[type=checkbox]:checked'));
+                if (checked.length === 0) {
+                    e.preventDefault();
+                    document.getElementById('selectedCaMaError').textContent = 'Debe seleccionar al menos una materia para un Docente.';
+                    document.getElementById('selectedCaMaError').style.display = 'block';
+                    document.getElementById('materiasGroup').scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }
+        });
     </script>
 }

@@ -49,6 +49,7 @@ namespace ISFDyT124.Models
         //EMAIL
         [Required]
         [EmailAddress(ErrorMessage = "Ingrese una dirección de mail válida")]
+        [MaxLength(254, ErrorMessage = "No se permiten más de 254 caracteres.")] // Límite estándar de longitud para direcciones de email (RFC 5321)
         public string? UsEmail { get; set; }
 
         //CONTRASEÑA

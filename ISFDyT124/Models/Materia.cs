@@ -11,7 +11,7 @@ namespace ISFDyT124.Models
         [Required(ErrorMessage = "Debe ingresar el nombre de la materia.")]
         [StringLength(100, ErrorMessage = "No se permiten más de 100 caracteres.")]
         [RegularExpression(
-            @"^[A-Za-zÁÉÍÓÚáéíóúÜüÑñ0-9\s.,()-]*$",
+            @"^[A-Za-zÁÉÍÓÚáéíóúÜüÑñ\s.,()-]*$",
             ErrorMessage = "Ingrese una materia válida."
         )]
         [Display(Name = "Materia")]
