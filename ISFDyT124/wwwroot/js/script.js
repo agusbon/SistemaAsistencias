@@ -84,4 +84,67 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
+    // =========================================
+    // 4. PWA: SERVICE WORKER Y BANNER DE INSTALACIÓN
+    // =========================================
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function () {
+            navigator.serviceWorker.register('/sw.js').catch(function () {
+                // Si falla el registro (por ejemplo, en un entorno sin HTTPS) la app sigue
+                // funcionando normal, solo sin capacidad offline/instalación.
+            });
+        });
+    }
+
+    const pwaBanner = document.getElementById('pwaInstallBanner');
+    const pwaInstallBtn = document.getElementById('pwaInstallBtn');
+    const pwaInstallDismiss = document.getElementById('pwaInstallDismiss');
+
+    function yaEstaInstalada() {
+        return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    }
+
+    if (pwaBanner && !yaEstaInstalada() && !sessionStorage.getItem('pwaInstallDismissed')) {
+        let deferredInstallPrompt = null;
+
+        window.addEventListener('beforeinstallprompt', function (e) {
+            e.preventDefault();
+            deferredInstallPrompt = e;
+            pwaBanner.hidden = false;
+        });
+
+        window.addEventListener('appinstalled', function () {
+            pwaBanner.hidden = true;
+            deferredInstallPrompt = null;
+        });
+
+        // iOS Safari no dispara beforeinstallprompt: mostramos igual el aviso, con instrucciones
+        // manuales, para que el docente sepa que puede instalarla desde "Compartir".
+        const esIOS = /iphone|ipad|ipod/i.test(window.navigator.userAgent);
+        if (esIOS && !window.navigator.standalone) {
+            pwaBanner.querySelector('.pwa-install-text').textContent =
+                'Instalá la app: tocá el botón Compartir de Safari y elegí "Agregar a pantalla de inicio".';
+            if (pwaInstallBtn) pwaInstallBtn.hidden = true;
+            pwaBanner.hidden = false;
+        }
+
+        if (pwaInstallBtn) {
+            pwaInstallBtn.addEventListener('click', function () {
+                if (!deferredInstallPrompt) return;
+                deferredInstallPrompt.prompt();
+                deferredInstallPrompt.userChoice.finally(function () {
+                    deferredInstallPrompt = null;
+                    pwaBanner.hidden = true;
+                });
+            });
+        }
+
+        if (pwaInstallDismiss) {
+            pwaInstallDismiss.addEventListener('click', function () {
+                pwaBanner.hidden = true;
+                sessionStorage.setItem('pwaInstallDismissed', 'true');
+            });
+        }
+    }
+
 });

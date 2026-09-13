@@ -1,6 +1,7 @@
 using ISFDyT124.Data; // Importa el espacio de nombres para el contexto de la base de datos
 using ISFDyT124.Models; // Importa los modelos
 using ISFDyT124.Services; // Importa PasswordService para hashear la contraseña sembrada
+using Microsoft.AspNetCore.HttpOverrides; // Necesario para ForwardedHeadersOptions (deploy detrás del proxy de Railway)
 using Microsoft.EntityFrameworkCore; // Importa Entity Framework Core para acceso a base de datos
 
 //using ISFDyT124.DTOs; // Importa objetos de transferencia de datos
@@ -96,6 +97,14 @@ using (var scope = app.Services.CreateScope())
 
     await context.SaveChangesAsync();
 }
+
+// Railway (y cualquier proxy inverso) termina el HTTPS en su borde y reenvía la request al
+// contenedor por HTTP simple — sin esto, UseHttpsRedirection/UseHsts ven cada request como HTTP
+// y la vuelven a mandar a HTTPS, generando un loop de redirects infinito para el visitante.
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+});
 
 // Configuraciones para ambientes que NO son de desarrollo
 if (!app.Environment.IsDevelopment())
