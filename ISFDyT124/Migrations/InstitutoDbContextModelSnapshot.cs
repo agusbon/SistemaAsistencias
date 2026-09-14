@@ -17,7 +17,7 @@ namespace ISFDyT124.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.30")
+                .HasAnnotation("ProductVersion", "10.0.12")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -30,8 +30,7 @@ namespace ISFDyT124.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("AsId"));
 
-                    b.Property<DateTime?>("AsFecha")
-                        .IsRequired()
+                    b.Property<DateTime>("AsFecha")
                         .HasColumnType("datetime2");
 
                     b.Property<bool>("AsJustificacion")
@@ -177,8 +176,7 @@ namespace ISFDyT124.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("MaId"));
 
-                    b.Property<int?>("MaCantModulos")
-                        .IsRequired()
+                    b.Property<int>("MaCantModulos")
                         .HasColumnType("int");
 
                     b.Property<string>("MaDenominacion")
@@ -242,6 +240,9 @@ namespace ISFDyT124.Migrations
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("UsTokenRecovery")
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("UsId");
 

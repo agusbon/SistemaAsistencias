@@ -56,6 +56,13 @@ namespace ISFDyT124.Models
         [Display(Name = "Contraseña")]
         public string UsContrasena { get; set; }
 
+
+        // Token para recuperación de contraseña, inicializado como bloqueado 
+        public string? UsTokenRecovery { get; set; } = "tokenbloqueado"; 
+        //Esto se modifica en la base de datos
+
+
+
         //Relacion de Usuario - Rol
         [ForeignKey("Rol")] // Indica que la propiedad RolId es clave foránea hacia la entidad Rol
         [Required(ErrorMessage = "Debe elegir un rol.")] // Campo obligatorio elegir rol
