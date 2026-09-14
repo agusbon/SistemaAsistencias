@@ -19,23 +19,23 @@
         @Html.AntiForgeryToken()
         <input type="hidden" asp-for="CaMaId" />
 
-        <div style="display:flex;justify-content:center;">
-            <table style="border-collapse:collapse;border:2px solid #083c8a;width:720px;text-align:left;">
+        <div class="global-table-container">
+            <table class="global-table">
                 <thead>
                     <tr>
-                        <th style="padding:10px;border:1px solid #083c8a;width:40%">Apellido y Nombre</th>
-                        <th style="padding:10px;border:1px solid #083c8a;width:40%">Modulos</th>
-                        <th style="padding:10px;border:1px solid #083c8a;width:20%">Justificacion</th>
+                        <th class="align-left">Apellido y Nombre</th>
+                        <th class="align-left">Modulos</th>
+                        <th>Justificacion</th>
                     </tr>
                 </thead>
                 <tbody>
                     @for (int i = 0; i < Model.Rows.Count; i++)
                     {
                         <tr>
-                            <td style="padding:8px;border:1px solid #083c8a;">@Model.Rows[i].FullName
+                            <td class="align-left">@Model.Rows[i].FullName
                                 <input type="hidden" name="Rows[@i].UsId" value="@Model.Rows[i].UsId" />
                             </td>
-                            <td style="padding:8px;border:1px solid #083c8a;">
+                            <td class="align-left">
                                 @{
                                     var moduleCount = ViewData["MaCantModulos"] as int? ?? Model.ModuleCount;
                                 }
@@ -51,7 +51,7 @@
                                 }
                                 <span class="row-pct" data-row="@i" style="margin-left:8px;font-weight:bold;">@pct%</span>
                             </td>
-                            <td style="padding:8px;border:1px solid #083c8a;text-align:center;">
+                            <td>
                                 <input type="checkbox" name="Rows[@i].AsJustificacion" value="true" @(Model.Rows[i].AsJustificacion ? "checked" : "") />
                                 <input type="hidden" name="Rows[@i].AsPresente" value="@(Model.Rows[i].AsPresente ? "true" : "false")" />
                             </td>
@@ -63,7 +63,7 @@
 
         <div style="text-align:center;margin-top:24px;display:flex;justify-content:center;gap:12px;">
             <button type="submit" class="btn btn-primary" style="background:#083c8a;border-radius:26px;padding:12px 40px;border:none;">Guardar</button>
-            <a asp-action="Index" asp-controller="Asistencias" class="btn btn-secondary" style="border-radius:26px;padding:12px 28px;align-self:center;">Cancelar</a>
+            <a asp-action="Index" asp-controller="Asistencias" class="btn-cancel" style="text-decoration:none; text-align:center;">Cancelar</a>
         </div>
     </form>
 </main>
