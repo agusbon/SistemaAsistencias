@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using ISFDyT124.Data;
 using ISFDyT124.DTO;
 using ISFDyT124.Models;
@@ -234,19 +235,31 @@ namespace ISFDyT124.Controllers
                 CaCoId = selectedRoleId == 3 ? model.CaCoId : null,
             };
 
-            _context.Usuarios.Add(usuario);
-            await _context.SaveChangesAsync();
-
-            if (selectedRoleId == 2 && model.SelectedCaMaIds != null)
+            try
             {
-                var materias = await _context
-                    .CarreraMaterias.Where(cm => model.SelectedCaMaIds.Contains(cm.CaMaId))
-                    .ToListAsync();
-                foreach (var cm in materias)
-                {
-                    usuario.CarreraMaterias.Add(cm);
-                }
+                _context.Usuarios.Add(usuario);
                 await _context.SaveChangesAsync();
+
+                if (selectedRoleId == 2 && model.SelectedCaMaIds != null)
+                {
+                    var materias = await _context
+                        .CarreraMaterias.Where(cm => model.SelectedCaMaIds.Contains(cm.CaMaId))
+                        .ToListAsync();
+                    foreach (var cm in materias)
+                    {
+                        usuario.CarreraMaterias.Add(cm);
+                    }
+                    await _context.SaveChangesAsync();
+                }
+            }
+            catch (DbUpdateException)
+            {
+                ModelState.AddModelError(
+                    string.Empty,
+                    "No se pudo guardar el usuario. Verifique que todos los campos obligatorios estén completos e intente nuevamente."
+                );
+                await CargarListasFormularioUsuarioAsync();
+                return View(model);
             }
 
             return RedirectToAction(nameof(UsuariosABM));
@@ -265,7 +278,7 @@ namespace ISFDyT124.Controllers
 
             await CargarListasFormularioUsuarioAsync();
 
-            var dto = new UsuarioDetalleDto
+            var dto = new UsuarioEditarDto
             {
                 UsId = usuario.UsId,
                 UsApellido = usuario.UsApellido,
@@ -273,7 +286,6 @@ namespace ISFDyT124.Controllers
                 UsEmail = usuario.UsEmail,
                 UsDni = usuario.UsDni,
                 RoId = usuario.RoId,
-                RoDenominacion = usuario.Rol?.RoDenominacion,
                 CaCoId = usuario.CaCoId,
                 MateriasDenominacion = string.Join(
                     ",",
@@ -288,7 +300,7 @@ namespace ISFDyT124.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> UsuarioEditar(
             int id,
-            UsuarioDetalleDto model,
+            UsuarioEditarDto model,
             int selectedRoleId,
             List<int>? selectedCaMaIds
         )
@@ -355,7 +367,20 @@ namespace ISFDyT124.Controllers
                 usuario.CarreraMaterias.Clear();
             }
 
-            await _context.SaveChangesAsync();
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateException)
+            {
+                ModelState.AddModelError(
+                    string.Empty,
+                    "No se pudo guardar el usuario. Verifique que todos los campos obligatorios estén completos e intente nuevamente."
+                );
+                await CargarListasFormularioUsuarioAsync();
+                return View(model);
+            }
+
             return RedirectToAction(nameof(UsuariosABM));
         }
 
@@ -370,10 +395,33 @@ namespace ISFDyT124.Controllers
 
             if (usuario != null)
             {
+                int usuarioLogueadoId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
+                if (usuario.UsId == usuarioLogueadoId)
+                {
+                    TempData["Error"] = "No podés eliminar tu propio usuario.";
+                    return RedirectToAction(nameof(UsuariosABM));
+                }
+
+                if (usuario.RoId == 1 && await _context.Usuarios.CountAsync(u => u.RoId == 1) <= 1)
+                {
+                    TempData["Error"] = "No se puede eliminar el último Admin del sistema.";
+                    return RedirectToAction(nameof(UsuariosABM));
+                }
+
                 usuario.CarreraMaterias.Clear();
                 _context.UsuarioRoles.RemoveRange(usuario.UsuarioRoles);
                 _context.Usuarios.Remove(usuario);
-                await _context.SaveChangesAsync();
+
+                try
+                {
+                    await _context.SaveChangesAsync();
+                }
+                catch (DbUpdateException)
+                {
+                    TempData["Error"] = "No se pudo eliminar el usuario. Puede tener datos relacionados que lo impiden.";
+                    return RedirectToAction(nameof(UsuariosABM));
+                }
             }
 
             return RedirectToAction(nameof(UsuariosABM));
