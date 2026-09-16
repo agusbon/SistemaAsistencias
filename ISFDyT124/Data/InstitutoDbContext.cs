@@ -46,6 +46,12 @@ namespace ISFDyT124.Data
             // Configurar DNI único de la tabla USUARIOS
             modelBuilder.Entity<Usuario>().HasIndex(u => u.UsDni).IsUnique();
 
+            // Restricciones de unicidad (ticket 4.14): nada más impedía cargar la misma
+            // combinación dos veces. Requiere que la base ya esté libre de duplicados.
+            modelBuilder.Entity<CarreraMateria>().HasIndex(cm => new { cm.CaId, cm.MaId }).IsUnique();
+            modelBuilder.Entity<Inscripciones>().HasIndex(i => new { i.UsId, i.CaMaId }).IsUnique();
+            modelBuilder.Entity<CarreraCohorte>().HasIndex(cc => new { cc.CaId, cc.CoId }).IsUnique();
+
             // Configuración de las Relaciones y Claves Foráneas
 
             //// Relación LOGIN -> USUARIO (Uno a Uno / Muchos a Uno, según esquema de base de datos)
