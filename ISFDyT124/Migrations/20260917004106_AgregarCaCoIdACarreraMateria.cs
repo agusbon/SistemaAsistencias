@@ -54,9 +54,21 @@ namespace ISFDyT124.Migrations
             ");
 
             // 4) Recién ahora se puede soltar la columna vieja sin perder el dato.
-            migrationBuilder.DropForeignKey(
-                name: "FK_CarreraMateria_Carreras_CaId",
-                table: "CarreraMateria");
+            // El nombre de esta FK no es confiable: Railway todavía tiene el nombre
+            // viejo con drift ("FK_CarrerasMaterias_Carreras_CaId", con "s") de antes
+            // del fix del ticket 6.2, que solo corrigió el archivo de migración para
+            // bases nuevas — nunca renombró la restricción real ya aplicada en Railway.
+            // Se busca dinámicamente por relación (tabla origen -> tabla destino) en vez
+            // de asumir un nombre fijo.
+            migrationBuilder.Sql(@"
+                DECLARE @fk NVARCHAR(200);
+                SELECT @fk = fk.name
+                FROM sys.foreign_keys fk
+                WHERE fk.parent_object_id = OBJECT_ID('CarreraMateria')
+                    AND fk.referenced_object_id = OBJECT_ID('Carreras');
+                IF @fk IS NOT NULL
+                    EXEC('ALTER TABLE CarreraMateria DROP CONSTRAINT [' + @fk + ']');
+            ");
 
             migrationBuilder.DropIndex(
                 name: "IX_CarreraMateria_CaId_MaId",
