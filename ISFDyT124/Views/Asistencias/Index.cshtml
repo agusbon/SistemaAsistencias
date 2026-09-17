@@ -5,6 +5,11 @@
     ViewData["BodyClass"] = "inicio-page";
 }
 
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="info-banner"><div class="info-col-left"><p class="info-bold">@TempData["SuccessMessage"]</p></div></div>
+}
+
 <div class="page-title-container">
     <h2 class="page-main-title">Gestión de Asistencia</h2>
     <p class="page-subtitle" style="text-align: center; color: var(--text-muted); font-size: 0.95rem; margin-top: 5px;">Seleccione la carrera y materia para continuar</p>

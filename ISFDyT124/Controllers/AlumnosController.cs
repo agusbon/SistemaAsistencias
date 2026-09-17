@@ -51,16 +51,15 @@ namespace ISFDyT124.Controllers
             if (EsAdminODireccion)
                 return null;
 
-            var carreraIds = await _context
+            // Antes se expandía a "todas las cohortes de la misma Carrera" porque
+            // CarreraMateria no sabía a qué cohorte pertenecía la cátedra del Docente.
+            // Ahora la cátedra ya trae su propio CaCoId: se usa directo, sin expandir.
+            return await _context
                 .Usuarios.Where(u => u.UsId == UsuarioActualId)
                 .SelectMany(u => u.CarreraMaterias)
-                .Select(cm => cm.CaId)
+                .Where(cm => cm.CaCoId != null)
+                .Select(cm => cm.CaCoId!.Value)
                 .Distinct()
-                .ToListAsync();
-
-            return await _context
-                .CarreraCohortes.Where(cc => carreraIds.Contains(cc.CaId))
-                .Select(cc => cc.CaCoId)
                 .ToListAsync();
         }
 
@@ -97,13 +96,6 @@ namespace ISFDyT124.Controllers
                 .ToListAsync();
         }
 
-        /// <summary>CaId de la carrera a la que pertenece un CarreraCohorte (null si no existe).</summary>
-        private async Task<int?> CaIdDeCarreraCohorteAsync(int caCoId) =>
-            await _context
-                .CarreraCohortes.Where(cc => cc.CaCoId == caCoId)
-                .Select(cc => (int?)cc.CaId)
-                .FirstOrDefaultAsync();
-
         /// <summary>
         /// Repone en ViewBag lo que necesitan los formularios al re-renderizar por error.
         /// Las materias las trae la vista por AJAX (MateriasPorCarreraCohorte).
@@ -111,18 +103,14 @@ namespace ISFDyT124.Controllers
         private Task RecargarFormAsync(AlumnoFormDto model, List<int>? caCoIdsPermitidos) =>
             CargarCarreraCohortesAsync(caCoIdsPermitidos);
 
-        /// <summary>De la selección recibida, devuelve solo los CaMaId que realmente son materias de esa carrera.</summary>
+        /// <summary>De la selección recibida, devuelve solo los CaMaId que realmente son cátedras de esa Carrera-Cohorte.</summary>
         private async Task<List<int>> CaMaIdsValidosAsync(int caCoId, List<int>? seleccion)
         {
             if (seleccion == null || seleccion.Count == 0)
                 return new List<int>();
 
-            int? caId = await CaIdDeCarreraCohorteAsync(caCoId);
-            if (caId == null)
-                return new List<int>();
-
             return await _context
-                .CarreraMaterias.Where(cm => cm.CaId == caId.Value && seleccion.Contains(cm.CaMaId))
+                .CarreraMaterias.Where(cm => cm.CaCoId == caCoId && seleccion.Contains(cm.CaMaId))
                 .Select(cm => cm.CaMaId)
                 .ToListAsync();
         }
@@ -138,12 +126,8 @@ namespace ISFDyT124.Controllers
             if (permitidos != null && !permitidos.Contains(caCoId))
                 return Json(Array.Empty<object>());
 
-            int? caId = await CaIdDeCarreraCohorteAsync(caCoId);
-            if (caId == null)
-                return Json(Array.Empty<object>());
-
             var materias = await _context
-                .CarreraMaterias.Where(cm => cm.CaId == caId.Value)
+                .CarreraMaterias.Where(cm => cm.CaCoId == caCoId)
                 .Include(cm => cm.Materia)
                 .Select(cm => new { caMaId = cm.CaMaId, denominacion = cm.Materia!.MaDenominacion })
                 .ToListAsync();

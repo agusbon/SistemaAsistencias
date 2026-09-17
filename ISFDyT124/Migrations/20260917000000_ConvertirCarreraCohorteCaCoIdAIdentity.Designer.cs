@@ -4,6 +4,7 @@ using ISFDyT124.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ISFDyT124.Migrations
 {
     [DbContext(typeof(InstitutoDbContext))]
-    partial class InstitutoDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260917000000_ConvertirCarreraCohorteCaCoIdAIdentity")]
+    partial class ConvertirCarreraCohorteCaCoIdAIdentity
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -186,9 +189,6 @@ namespace ISFDyT124.Migrations
                         .IsRequired()
                         .HasMaxLength(25)
                         .HasColumnType("nvarchar(25)");
-
-                    b.Property<int>("MaPorcentajeAsistenciaMinima")
-                        .HasColumnType("int");
 
                     b.HasKey("MaId");
 

@@ -38,12 +38,17 @@ namespace ISFDyT124.Controllers
                 })
                 .ToListAsync();
             ViewBag.CarreraMateriasList = await _context
-                .CarreraMaterias.Include(cm => cm.Carrera)
+                .CarreraMaterias.Include(cm => cm.CarreraCohorte)
+                    .ThenInclude(cc => cc!.Carrera)
                 .Include(cm => cm.Materia)
                 .Select(cm => new
                 {
                     cm.CaMaId,
-                    Denominacion = cm.Carrera.CaDenominacion + " / " + cm.Materia.MaDenominacion,
+                    Denominacion =
+                        (cm.CarreraCohorte != null
+                            ? cm.CarreraCohorte.Carrera!.CaDenominacion
+                            : "Sin carrera")
+                        + " / " + cm.Materia!.MaDenominacion,
                 })
                 .ToListAsync();
         }
@@ -77,7 +82,8 @@ namespace ISFDyT124.Controllers
             var docentes = await _context
                 .Usuarios.Where(u => u.RoId == 2)
                 .Include(u => u.CarreraMaterias)
-                    .ThenInclude(cm => cm.Carrera)
+                    .ThenInclude(cm => cm.CarreraCohorte)
+                    .ThenInclude(cc => cc!.Carrera)
                 .Include(u => u.CarreraMaterias)
                     .ThenInclude(cm => cm.Materia)
                 .ToListAsync();
@@ -88,14 +94,14 @@ namespace ISFDyT124.Controllers
             {
                 foreach (var catedra in docente.CarreraMaterias)
                 {
-                    var caCoIds = await _context
-                        .CarreraCohortes.Where(cc => cc.CaId == catedra.CaId)
-                        .Select(cc => cc.CaCoId)
-                        .ToListAsync();
-
-                    var cantidadAlumnos = await _context.Usuarios.CountAsync(u =>
-                        u.RoId == 3 && u.CaCoId != null && caCoIds.Contains(u.CaCoId.Value)
-                    );
+                    // Antes se contaban todos los alumnos de cualquier cohorte de la misma
+                    // Carrera (CarreraMateria no sabía a qué cohorte pertenecía la cátedra).
+                    // Ahora que la cátedra tiene su propio CaCoId, se cuenta solo esa cohorte.
+                    var cantidadAlumnos = catedra.CaCoId.HasValue
+                        ? await _context.Usuarios.CountAsync(u =>
+                            u.RoId == 3 && u.CaCoId == catedra.CaCoId.Value
+                        )
+                        : 0;
 
                     // Se matchea por MaId (no CaMaId): ProfesorController guarda las
                     // asistencias con MaId y deja CaMaId en null.
@@ -111,7 +117,7 @@ namespace ISFDyT124.Controllers
                             UsId = docente.UsId,
                             DocenteNombre = $"{docente.UsApellido}, {docente.UsNombre}",
                             CaMaId = catedra.CaMaId,
-                            CarreraDenominacion = catedra.Carrera?.CaDenominacion ?? "-",
+                            CarreraDenominacion = catedra.CarreraCohorte?.Carrera?.CaDenominacion ?? "-",
                             MateriaDenominacion = catedra.Materia?.MaDenominacion ?? "-",
                             CantidadAlumnos = cantidadAlumnos,
                             CantidadFechasCargadas = fechas.Count,
@@ -138,7 +144,8 @@ namespace ISFDyT124.Controllers
                 .Include(u => u.CarreraCohorte)
                     .ThenInclude(cc => cc.Cohorte)
                 .Include(u => u.CarreraMaterias)
-                    .ThenInclude(cm => cm.Carrera)
+                    .ThenInclude(cm => cm.CarreraCohorte)
+                    .ThenInclude(cc => cc!.Carrera)
                 .Include(u => u.CarreraMaterias)
                     .ThenInclude(cm => cm.Materia)
                 .Select(u => new UsuarioDetalleDto
@@ -161,7 +168,10 @@ namespace ISFDyT124.Controllers
                         ? string.Join(
                             ", ",
                             u.CarreraMaterias.Select(cm =>
-                                cm.Carrera.CaDenominacion + " / " + cm.Materia.MaDenominacion
+                                (cm.CarreraCohorte != null
+                                    ? cm.CarreraCohorte.Carrera!.CaDenominacion
+                                    : "Sin carrera")
+                                + " / " + cm.Materia!.MaDenominacion
                             )
                         )
                         : null,
@@ -235,14 +245,21 @@ namespace ISFDyT124.Controllers
                 CaCoId = selectedRoleId == 3 ? model.CaCoId : null,
             };
 
-            _context.Usuarios.Add(usuario);
-
             try
             {
+                _context.Usuarios.Add(usuario);
                 await _context.SaveChangesAsync();
 
                 if (selectedRoleId == 2 && model.SelectedCaMaIds != null)
                 {
+                    // usuario es un objeto recién creado (no vino de un Include), así que EF
+                    // no sabe que su colección CarreraMaterias está "cargada". Sin esto, el
+                    // Add() de abajo tira InvalidOperationException al guardar ("el valor de
+                    // la FK de la tabla intermedia es desconocido") porque no puede resolver
+                    // el estado de la relación muchos a muchos. Como es un usuario nuevo,
+                    // sabemos con certeza que la colección está vacía.
+                    _context.Entry(usuario).Collection(u => u.CarreraMaterias).IsLoaded = true;
+
                     var materias = await _context
                         .CarreraMaterias.Where(cm => model.SelectedCaMaIds.Contains(cm.CaMaId))
                         .ToListAsync();
@@ -255,11 +272,9 @@ namespace ISFDyT124.Controllers
             }
             catch (DbUpdateException)
             {
-                // Red de seguridad: si algún dato inválido esquivó la validación del DTO
-                // y llegó hasta SQL Server, no dejar que reviente en pantalla sin explicar.
                 ModelState.AddModelError(
                     string.Empty,
-                    "No se pudo guardar el usuario: revisá que todos los campos tengan un formato válido."
+                    "No se pudo guardar el usuario. Verifique que todos los campos obligatorios estén completos e intente nuevamente."
                 );
                 await CargarListasFormularioUsuarioAsync();
                 return View(model);
@@ -281,7 +296,7 @@ namespace ISFDyT124.Controllers
 
             await CargarListasFormularioUsuarioAsync();
 
-            var dto = new UsuarioDetalleDto
+            var dto = new UsuarioEditarDto
             {
                 UsId = usuario.UsId,
                 UsApellido = usuario.UsApellido,
@@ -289,7 +304,6 @@ namespace ISFDyT124.Controllers
                 UsEmail = usuario.UsEmail,
                 UsDni = usuario.UsDni,
                 RoId = usuario.RoId,
-                RoDenominacion = usuario.Rol?.RoDenominacion,
                 CaCoId = usuario.CaCoId,
                 MateriasDenominacion = string.Join(
                     ",",
@@ -304,7 +318,7 @@ namespace ISFDyT124.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> UsuarioEditar(
             int id,
-            UsuarioDetalleDto model,
+            UsuarioEditarDto model,
             int selectedRoleId,
             List<int>? selectedCaMaIds
         )
@@ -379,7 +393,7 @@ namespace ISFDyT124.Controllers
             {
                 ModelState.AddModelError(
                     string.Empty,
-                    "No se pudo guardar el usuario: revisá que todos los campos tengan un formato válido."
+                    "No se pudo guardar el usuario. Verifique que todos los campos obligatorios estén completos e intente nuevamente."
                 );
                 await CargarListasFormularioUsuarioAsync();
                 return View(model);
@@ -388,61 +402,62 @@ namespace ISFDyT124.Controllers
             return RedirectToAction(nameof(UsuariosABM));
         }
 
-        // Flujo manual de "Olvidé mi contraseña" (ticket 2.2): no hay envío de mails
-        // configurado, así que el Admin restablece la clave al valor por defecto (el DNI del
-        // usuario) — mismo criterio que un alta nueva — y el propio login ya fuerza el cambio
-        // de contraseña la próxima vez que ese usuario entre.
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> UsuarioRestablecerContrasena(int id)
+        [HttpGet]
+        public async Task<IActionResult> UsuarioEliminar(int id)
         {
-            var usuario = await _context.Usuarios.FindAsync(id);
+            var usuario = await _context.Usuarios
+                .Include(u => u.Rol)
+                .FirstOrDefaultAsync(u => u.UsId == id);
+
             if (usuario == null)
-                return RedirectToAction(nameof(UsuariosABM));
+            {
+                return NotFound();
+            }
 
-            usuario.UsContrasena = PasswordService.HashPassword(usuario.UsDni.ToString());
-            await _context.SaveChangesAsync();
-
-            TempData["SuccessMessage"] =
-                $"Se restableció la contraseña de {usuario.UsApellido}, {usuario.UsNombre} — vuelve a ser su DNI.";
-            return RedirectToAction(nameof(UsuariosABM));
+            return View(usuario);
         }
 
-        [HttpPost]
+
+
+        [HttpPost, ActionName("UsuarioEliminar")]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> UsuarioEliminar(int id)
+        public async Task<IActionResult> UsuarioEliminarConfirmado(int id)
         {
             var usuario = await _context
                 .Usuarios.Include(u => u.UsuarioRoles)
                 .Include(u => u.CarreraMaterias)
                 .FirstOrDefaultAsync(u => u.UsId == id);
 
-            if (usuario == null)
-                return RedirectToAction(nameof(UsuariosABM));
-
-            // No dejar que un Admin se borre a sí mismo (se quedaría sin sesión válida
-            // en medio de la operación) ni borrar al último Admin que quede activo.
-            var idLogueado = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-            if (usuario.UsId == idLogueado)
+            if (usuario != null)
             {
-                TempData["ErrorMessage"] = "No podés eliminar tu propio usuario.";
-                return RedirectToAction(nameof(UsuariosABM));
-            }
+                int usuarioLogueadoId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
-            if (usuario.RoId == 1)
-            {
-                int cantidadAdmins = await _context.Usuarios.CountAsync(u => u.RoId == 1);
-                if (cantidadAdmins <= 1)
+                if (usuario.UsId == usuarioLogueadoId)
                 {
-                    TempData["ErrorMessage"] = "No se puede eliminar al último Admin del sistema.";
+                    TempData["Error"] = "No podés eliminar tu propio usuario.";
+                    return RedirectToAction(nameof(UsuariosABM));
+                }
+
+                if (usuario.RoId == 1 && await _context.Usuarios.CountAsync(u => u.RoId == 1) <= 1)
+                {
+                    TempData["Error"] = "No se puede eliminar el último Admin del sistema.";
+                    return RedirectToAction(nameof(UsuariosABM));
+                }
+
+                usuario.CarreraMaterias.Clear();
+                _context.UsuarioRoles.RemoveRange(usuario.UsuarioRoles);
+                _context.Usuarios.Remove(usuario);
+
+                try
+                {
+                    await _context.SaveChangesAsync();
+                }
+                catch (DbUpdateException)
+                {
+                    TempData["Error"] = "No se pudo eliminar el usuario. Puede tener datos relacionados que lo impiden.";
                     return RedirectToAction(nameof(UsuariosABM));
                 }
             }
-
-            usuario.CarreraMaterias.Clear();
-            _context.UsuarioRoles.RemoveRange(usuario.UsuarioRoles);
-            _context.Usuarios.Remove(usuario);
-            await _context.SaveChangesAsync();
 
             return RedirectToAction(nameof(UsuariosABM));
         }
@@ -479,7 +494,7 @@ namespace ISFDyT124.Controllers
             }
 
             var materias = await _context.CarreraMaterias
-                .Where(cm => cm.CaId == cc.CaId)
+                .Where(cm => cm.CaCoId == cc.CaCoId)
                 .Include(cm => cm.Materia)
                 .Select(cm => new
                 {
