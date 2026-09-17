@@ -22,5 +22,6 @@ namespace ISFDyT124.Models
         // Navegación
         public virtual Carrera? Carrera { get; set; }
         public virtual Cohorte? Cohorte { get; set; }
+        public virtual ICollection<CarreraMateria>? CarreraMaterias { get; set; }
     }
 }

@@ -39,10 +39,26 @@ public class MateriasController : Controller
         return View(materia);
     }
 
-    // GET: MATERIAS/Create
-    public IActionResult Create()
+    private async Task<SelectList> CarreraCohortesSelectListAsync(object? selected = null)
     {
-        ViewData["CaId"] = new SelectList(_context.Carreras, "CaId", "CaDenominacion");
+        var items = await _context.CarreraCohortes
+            .Include(cc => cc.Carrera)
+            .Include(cc => cc.Cohorte)
+            .Select(cc => new
+            {
+                cc.CaCoId,
+                Denominacion = cc.Carrera!.CaDenominacion + " - " + cc.Cohorte!.CoAnio,
+            })
+            .ToListAsync();
+        return new SelectList(items, "CaCoId", "Denominacion", selected);
+    }
+
+    // GET: MATERIAS/Create
+    public async Task<IActionResult> Create()
+    {
+        // Una materia se asigna directo a una Carrera-Cohorte (no solo a la Carrera):
+        // "Inglés I" de la cohorte 2025 es una cátedra distinta a la de la cohorte 2026.
+        ViewData["CaCoId"] = await CarreraCohortesSelectListAsync();
         ViewData["MaId"] = new SelectList(_context.Materias, "MaId", "MaDenominacion");
         return View();
     }
@@ -50,18 +66,18 @@ public class MateriasController : Controller
     // POST: MATERIAS/Create
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create([Bind("MaDenominacion,MaModalidad,MaCantModulos")] Materia materia, int? CaId)
+    public async Task<IActionResult> Create([Bind("MaDenominacion,MaModalidad,MaCantModulos")] Materia materia, int? CaCoId)
     {
         if (ModelState.IsValid)
         {
             _context.Add(materia);
             await _context.SaveChangesAsync();
-            // Si se seleccionó una carrera, crear la relación en CarrerasMaterias
-            if (CaId.HasValue)
+            // Si se seleccionó una carrera-cohorte, crear la cátedra en CarreraMateria
+            if (CaCoId.HasValue)
             {
                 var rel = new CarreraMateria
                 {
-                    CaId = CaId.Value,
+                    CaCoId = CaCoId.Value,
                     MaId = materia.MaId
                 };
                 _context.CarreraMaterias.Add(rel);
@@ -71,7 +87,7 @@ public class MateriasController : Controller
         }
 
         // repoblar selects en caso de error
-        ViewData["CaId"] = new SelectList(_context.Carreras, "CaId", "CaDenominacion");
+        ViewData["CaCoId"] = await CarreraCohortesSelectListAsync(CaCoId);
         ViewData["MaId"] = new SelectList(_context.Materias, "MaId", "MaDenominacion", materia?.MaId);
         return View(materia);
     }
