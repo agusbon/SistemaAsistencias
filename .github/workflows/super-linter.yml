@@ -31,7 +31,7 @@ jobs:
           VALIDATE_ALL_CODEBASE: true
           DEFAULT_BRANCH: master
 
-          FILTER_REGEX_EXCLUDE: ^\.github/workflows/
+          FILTER_REGEX_EXCLUDE: (^\.github/workflows/|global.json)
 
           # --- .NET Solution Checks & Fixes ---
           VALIDATE_DOTNET_SLN_FORMAT_WHITESPACE: true
