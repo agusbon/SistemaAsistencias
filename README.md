@@ -9,7 +9,7 @@ papel utilizado desde prácticamente su creación.
 
 Todo el trabajo para crear la asistencia se realizará en un repositorio compartido
 que está vinculado con GitHub. Este mismo está dividido en varios módulos que se
-separan en 4 grupos que se dividen de estas formas:
+separan en 4 grupos que se dividen de estas forms:
 
 * **Grupo 1:** Login Y Recuperar Contraseña.
 * **Grupo 2:** ABM Usuarios.
