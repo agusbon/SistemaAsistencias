@@ -22,6 +22,9 @@ namespace ISFDyT124.Migrations
             //    cátedras cargadas (antes CarreraMateria no sabía de cohortes). Se usa
             //    la única cohorte existente como default (hoy: 2026). En una base nueva
             //    o vacía esto no inserta nada, porque tampoco hay CarreraMateria previas.
+            //    No se especifica CaCoId en el INSERT: la migración
+            //    ConvertirCarreraCohorteCaCoIdAIdentity (corre antes que esta) ya convirtió
+            //    esa columna a IDENTITY, así que la base lo asigna sola.
             migrationBuilder.Sql(@"
                 DECLARE @DefaultCoId INT = (SELECT TOP 1 CoId FROM Cohortes ORDER BY CoId);
                 IF @DefaultCoId IS NOT NULL

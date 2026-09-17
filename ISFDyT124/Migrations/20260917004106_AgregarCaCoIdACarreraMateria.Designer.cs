@@ -83,7 +83,10 @@ namespace ISFDyT124.Migrations
             modelBuilder.Entity("ISFDyT124.Models.CarreraCohorte", b =>
                 {
                     b.Property<int>("CaCoId")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("CaCoId"));
 
                     b.Property<int>("CaId")
                         .HasColumnType("int");

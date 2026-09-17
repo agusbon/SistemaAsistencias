@@ -4,6 +4,7 @@ using ISFDyT124.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ISFDyT124.Migrations
 {
     [DbContext(typeof(InstitutoDbContext))]
-    partial class InstitutoDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260917000000_ConvertirCarreraCohorteCaCoIdAIdentity")]
+    partial class ConvertirCarreraCohorteCaCoIdAIdentity
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -56,7 +59,7 @@ namespace ISFDyT124.Migrations
 
                     b.HasIndex("UsId");
 
-                    b.ToTable("Asistencias", (string)null);
+                    b.ToTable("Asistencias");
                 });
 
             modelBuilder.Entity("ISFDyT124.Models.Carrera", b =>
@@ -74,7 +77,7 @@ namespace ISFDyT124.Migrations
 
                     b.HasKey("CaId");
 
-                    b.ToTable("Carreras", (string)null);
+                    b.ToTable("Carreras");
                 });
 
             modelBuilder.Entity("ISFDyT124.Models.CarreraCohorte", b =>
@@ -98,7 +101,7 @@ namespace ISFDyT124.Migrations
                     b.HasIndex("CaId", "CoId")
                         .IsUnique();
 
-                    b.ToTable("CarreraCohortes", (string)null);
+                    b.ToTable("CarreraCohortes");
                 });
 
             modelBuilder.Entity("ISFDyT124.Models.CarreraMateria", b =>
@@ -139,7 +142,7 @@ namespace ISFDyT124.Migrations
 
                     b.HasKey("CoId");
 
-                    b.ToTable("Cohortes", (string)null);
+                    b.ToTable("Cohortes");
                 });
 
             modelBuilder.Entity("ISFDyT124.Models.Inscripciones", b =>
@@ -163,7 +166,7 @@ namespace ISFDyT124.Migrations
                     b.HasIndex("UsId", "CaMaId")
                         .IsUnique();
 
-                    b.ToTable("Inscripciones", (string)null);
+                    b.ToTable("Inscripciones");
                 });
 
             modelBuilder.Entity("ISFDyT124.Models.Materia", b =>
@@ -189,7 +192,7 @@ namespace ISFDyT124.Migrations
 
                     b.HasKey("MaId");
 
-                    b.ToTable("Materias", (string)null);
+                    b.ToTable("Materias");
                 });
 
             modelBuilder.Entity("ISFDyT124.Models.Rol", b =>
@@ -204,7 +207,7 @@ namespace ISFDyT124.Migrations
 
                     b.HasKey("RoId");
 
-                    b.ToTable("Roles", (string)null);
+                    b.ToTable("Roles");
                 });
 
             modelBuilder.Entity("ISFDyT124.Models.Usuario", b =>
@@ -249,7 +252,7 @@ namespace ISFDyT124.Migrations
                     b.HasIndex("UsDni")
                         .IsUnique();
 
-                    b.ToTable("Usuarios", (string)null);
+                    b.ToTable("Usuarios");
                 });
 
             modelBuilder.Entity("ISFDyT124.Models.UsuarioRol", b =>
@@ -269,7 +272,7 @@ namespace ISFDyT124.Migrations
 
                     b.HasIndex("UsId");
 
-                    b.ToTable("UsuarioRoles", (string)null);
+                    b.ToTable("UsuarioRoles");
                 });
 
             modelBuilder.Entity("UsuarioCarreraMateria", b =>
@@ -284,7 +287,7 @@ namespace ISFDyT124.Migrations
 
                     b.HasIndex("UsuariosUsId");
 
-                    b.ToTable("UsuarioCarreraMateria", (string)null);
+                    b.ToTable("UsuarioCarreraMateria");
                 });
 
             modelBuilder.Entity("ISFDyT124.Models.Asistencia", b =>
