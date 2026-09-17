@@ -48,7 +48,14 @@ namespace ISFDyT124.Data
 
             // Restricciones de unicidad (ticket 4.14): nada más impedía cargar la misma
             // combinación dos veces. Requiere que la base ya esté libre de duplicados.
-            modelBuilder.Entity<CarreraMateria>().HasIndex(cm => new { cm.CaId, cm.MaId }).IsUnique();
+            // Filtrado (WHERE CaCoId IS NOT NULL): CaCoId es opcional mientras una cátedra
+            // no tenga cohorte asignada todavía (ticket 4.12); SQL Server trata NULL como
+            // valor comparable en un índice único, así que sin el filtro dos cátedras sin
+            // cohorte asignada de la misma materia chocarían entre sí.
+            modelBuilder.Entity<CarreraMateria>()
+                .HasIndex(cm => new { cm.CaCoId, cm.MaId })
+                .IsUnique()
+                .HasFilter("[CaCoId] IS NOT NULL");
             modelBuilder.Entity<Inscripciones>().HasIndex(i => new { i.UsId, i.CaMaId }).IsUnique();
             modelBuilder.Entity<CarreraCohorte>().HasIndex(cc => new { cc.CaId, cc.CoId }).IsUnique();
 
@@ -87,12 +94,16 @@ namespace ISFDyT124.Data
                 .HasForeignKey(cc => cc.CoId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // Relación CARRERA_MATERIA -> CARRERAS y MATERIAS
+            // Relación CARRERA_MATERIA -> CARRERA_COHORTE y MATERIAS. Una cátedra (Carrera+Materia)
+            // queda atada a una cohorte concreta: "Inglés I" de la cohorte 2025 es una cátedra
+            // distinta de "Inglés I" de la cohorte 2026. CaCoId es opcional (SetNull) para no
+            // bloquear el borrado de una CarreraCohorte ni forzar a elegir cohorte al crear la
+            // cátedra (ticket 4.12 todavía no tiene alta de Cohorte/CarreraCohorte terminada).
             modelBuilder.Entity<CarreraMateria>()
-                .HasOne(cm => cm.Carrera)
-                .WithMany(c => c.CarreraMaterias)
-                .HasForeignKey(cm => cm.CaId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .HasOne(cm => cm.CarreraCohorte)
+                .WithMany(cc => cc.CarreraMaterias)
+                .HasForeignKey(cm => cm.CaCoId)
+                .OnDelete(DeleteBehavior.SetNull);
 
             modelBuilder.Entity<CarreraMateria>()
                 .HasOne(cm => cm.Materia)

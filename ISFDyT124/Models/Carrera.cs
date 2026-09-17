@@ -20,7 +20,8 @@ namespace ISFDyT124.Models
 
 
         // RELACION
-        public virtual ICollection<CarreraMateria>? CarreraMaterias { get; set; }
+        // CarreraMateria ya no cuelga directo de Carrera: una cátedra (Carrera+Materia)
+        // ahora está atada a una cohorte concreta vía CarreraCohorte.CarreraMaterias.
         public virtual ICollection<CarreraCohorte>? CarreraCohortes { get; set; }
     }
 }

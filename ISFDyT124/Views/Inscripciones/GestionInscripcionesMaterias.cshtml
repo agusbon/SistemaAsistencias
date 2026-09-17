@@ -85,7 +85,7 @@
                         {
                             <tr>
                                 <td class="align-left">@((ins.Usuarios != null) ? (ins.Usuarios.UsApellido + " " + ins.Usuarios.UsNombre) : "")</td>
-                                <td class="align-left">@((ins.CarreraMateria != null && ins.CarreraMateria.Carrera != null) ? ins.CarreraMateria.Carrera.CaDenominacion : "")</td>
+                                <td class="align-left">@((ins.CarreraMateria?.CarreraCohorte?.Carrera != null) ? ins.CarreraMateria.CarreraCohorte.Carrera.CaDenominacion : "")</td>
                                 <td class="align-left">@((ins.CarreraMateria != null && ins.CarreraMateria.Materia != null) ? ins.CarreraMateria.Materia.MaDenominacion : "")</td>
 }                                <td class="action-cell">
                                     <a asp-controller="Inscripciones" asp-action="ModificarInscripcionMateria" asp-route-inid="@ins.InId" class="icon-btn btn-edit" title="Editar">

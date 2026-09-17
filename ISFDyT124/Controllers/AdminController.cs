@@ -38,12 +38,17 @@ namespace ISFDyT124.Controllers
                 })
                 .ToListAsync();
             ViewBag.CarreraMateriasList = await _context
-                .CarreraMaterias.Include(cm => cm.Carrera)
+                .CarreraMaterias.Include(cm => cm.CarreraCohorte)
+                    .ThenInclude(cc => cc!.Carrera)
                 .Include(cm => cm.Materia)
                 .Select(cm => new
                 {
                     cm.CaMaId,
-                    Denominacion = cm.Carrera.CaDenominacion + " / " + cm.Materia.MaDenominacion,
+                    Denominacion =
+                        (cm.CarreraCohorte != null
+                            ? cm.CarreraCohorte.Carrera!.CaDenominacion
+                            : "Sin carrera")
+                        + " / " + cm.Materia!.MaDenominacion,
                 })
                 .ToListAsync();
         }
@@ -77,7 +82,8 @@ namespace ISFDyT124.Controllers
             var docentes = await _context
                 .Usuarios.Where(u => u.RoId == 2)
                 .Include(u => u.CarreraMaterias)
-                    .ThenInclude(cm => cm.Carrera)
+                    .ThenInclude(cm => cm.CarreraCohorte)
+                    .ThenInclude(cc => cc!.Carrera)
                 .Include(u => u.CarreraMaterias)
                     .ThenInclude(cm => cm.Materia)
                 .ToListAsync();
@@ -88,14 +94,14 @@ namespace ISFDyT124.Controllers
             {
                 foreach (var catedra in docente.CarreraMaterias)
                 {
-                    var caCoIds = await _context
-                        .CarreraCohortes.Where(cc => cc.CaId == catedra.CaId)
-                        .Select(cc => cc.CaCoId)
-                        .ToListAsync();
-
-                    var cantidadAlumnos = await _context.Usuarios.CountAsync(u =>
-                        u.RoId == 3 && u.CaCoId != null && caCoIds.Contains(u.CaCoId.Value)
-                    );
+                    // Antes se contaban todos los alumnos de cualquier cohorte de la misma
+                    // Carrera (CarreraMateria no sabía a qué cohorte pertenecía la cátedra).
+                    // Ahora que la cátedra tiene su propio CaCoId, se cuenta solo esa cohorte.
+                    var cantidadAlumnos = catedra.CaCoId.HasValue
+                        ? await _context.Usuarios.CountAsync(u =>
+                            u.RoId == 3 && u.CaCoId == catedra.CaCoId.Value
+                        )
+                        : 0;
 
                     // Se matchea por MaId (no CaMaId): ProfesorController guarda las
                     // asistencias con MaId y deja CaMaId en null.
@@ -111,7 +117,7 @@ namespace ISFDyT124.Controllers
                             UsId = docente.UsId,
                             DocenteNombre = $"{docente.UsApellido}, {docente.UsNombre}",
                             CaMaId = catedra.CaMaId,
-                            CarreraDenominacion = catedra.Carrera?.CaDenominacion ?? "-",
+                            CarreraDenominacion = catedra.CarreraCohorte?.Carrera?.CaDenominacion ?? "-",
                             MateriaDenominacion = catedra.Materia?.MaDenominacion ?? "-",
                             CantidadAlumnos = cantidadAlumnos,
                             CantidadFechasCargadas = fechas.Count,
@@ -138,7 +144,8 @@ namespace ISFDyT124.Controllers
                 .Include(u => u.CarreraCohorte)
                     .ThenInclude(cc => cc.Cohorte)
                 .Include(u => u.CarreraMaterias)
-                    .ThenInclude(cm => cm.Carrera)
+                    .ThenInclude(cm => cm.CarreraCohorte)
+                    .ThenInclude(cc => cc!.Carrera)
                 .Include(u => u.CarreraMaterias)
                     .ThenInclude(cm => cm.Materia)
                 .Select(u => new UsuarioDetalleDto
@@ -161,7 +168,10 @@ namespace ISFDyT124.Controllers
                         ? string.Join(
                             ", ",
                             u.CarreraMaterias.Select(cm =>
-                                cm.Carrera.CaDenominacion + " / " + cm.Materia.MaDenominacion
+                                (cm.CarreraCohorte != null
+                                    ? cm.CarreraCohorte.Carrera!.CaDenominacion
+                                    : "Sin carrera")
+                                + " / " + cm.Materia!.MaDenominacion
                             )
                         )
                         : null,
@@ -459,7 +469,7 @@ namespace ISFDyT124.Controllers
             }
 
             var materias = await _context.CarreraMaterias
-                .Where(cm => cm.CaId == cc.CaId)
+                .Where(cm => cm.CaCoId == cc.CaCoId)
                 .Include(cm => cm.Materia)
                 .Select(cm => new
                 {

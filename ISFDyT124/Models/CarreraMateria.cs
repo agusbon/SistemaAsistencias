@@ -10,10 +10,9 @@ namespace ISFDyT124.Models
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int CaMaId { get; set; }
 
-        [Required(ErrorMessage = "Debe seleccionar una carrera.")]
-        [Display(Name = "Carrera")]
-        [ForeignKey("Carrera")]
-        public int CaId { get; set; }
+        [Display(Name = "Carrera-Cohorte")]
+        [ForeignKey("CarreraCohorte")]
+        public int? CaCoId { get; set; }
 
         [Required(ErrorMessage = "Debe seleccionar una materia.")]
         [Display(Name = "Materia")]
@@ -21,7 +20,7 @@ namespace ISFDyT124.Models
         public int MaId { get; set; }
 
         // Navegación
-        public virtual Carrera? Carrera { get; set; }
+        public virtual CarreraCohorte? CarreraCohorte { get; set; }
         public virtual Materia? Materia { get; set; }
     }
 }
