@@ -77,8 +77,7 @@
 </main>
 
 @section Scripts {
-    <script src="~/lib/dexie/dist/dexie.min.js"></script>
-    <script src="~/js/offline-asistencia.js" asp-append-version="true"></script>
+    @* Dexie y offline-asistencia.js ya se cargan en _Layout.cshtml para todo docente. *@
     <script>
         // Frente 7 (PWA offline): si no hay señal al guardar, encola en IndexedDB en vez de
         // mandar el formulario, sin avisos ni botones — se sincroniza sola cuando vuelva la

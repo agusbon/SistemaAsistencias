@@ -142,6 +142,15 @@
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/js/script.js" asp-append-version="true"></script>
+    @if (esDocente)
+    {
+        <!-- Frente 7 (PWA offline): se carga en TODAS las pantallas del docente, no solo
+             en Tomar Asistencia — si no, al guardar sin conexión y navegar a otra pantalla
+             (ej. Mis Cátedras), el listener de 'online' que sincroniza deja de existir y
+             la cola nunca se manda sola al recuperar señal. -->
+        <script src="~/lib/dexie/dist/dexie.min.js"></script>
+        <script src="~/js/offline-asistencia.js" asp-append-version="true"></script>
+    }
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>
