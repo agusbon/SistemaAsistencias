@@ -27,6 +27,14 @@ namespace ISFDyT124.Controllers
             return View();
         }
 
+        // VISTA GET: "Olvidé mi contraseña" — el flujo es manual vía Admin (no hay envío
+        // de mails configurado en el proyecto), así que esta vista solo explica el paso a
+        // seguir en vez de simular un envío que no pasa a ningún lado.
+        public IActionResult RecuperoContrasena()
+        {
+            return View();
+        }
+
         // RECIBIR DATOS POST: Se ejecuta al enviar el formulario. Usamos el DTO por buenas prácticas.
         [HttpPost]
         public async Task<IActionResult> Login(UsuarioLoginDto model)
@@ -98,9 +106,15 @@ namespace ISFDyT124.Controllers
             );
             var principal = new ClaimsPrincipal(identity);
 
+            // IsPersistent: sin esto la cookie es "de sesión de navegador" y Android la borra
+            // apenas el docente cierra la PWA, obligándolo a loguearse de nuevo al reabrirla.
+            // En un aula sin señal eso lo dejaba afuera del sistema (no se puede validar la
+            // contraseña sin llegar al servidor). Con la cookie persistida, la sesión sobrevive
+            // al cierre de la app y puede tomar asistencia sin conexión.
             await HttpContext.SignInAsync(
                 CookieAuthenticationDefaults.AuthenticationScheme,
-                principal
+                principal,
+                new AuthenticationProperties { IsPersistent = true }
             );
 
             // CAMBIO: ya no se puede comparar el DNI contra el hash guardado como strings

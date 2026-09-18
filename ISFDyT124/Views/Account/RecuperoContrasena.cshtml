@@ -1,50 +1,42 @@
-﻿<!DOCTYPE html>
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Recuperar Contraseña - Sistema de Asistencias</title>
+    <link rel="icon" type="image/png" href="~/images/logo.png" asp-append-version="true" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="~/css/style.css" asp-append-version="true">
+    <partial name="_PwaHead" />
 </head>
 <body class="login-page">
-    
-    <div class="auth-wrapper-global">
-        
-        <main class="auth-card">
-            <div class="auth-header">
-                <img src="img/logo.png" alt="IS 124" class="auth-logo">
-                <div class="auth-title">
-                    <div class="title-small">SISTEMA</div>
-                    <div class="title-large">ASISTENCIAS</div>
-                </div>
-            </div>
-            
-            <div class="header-divider-auth"></div>
+    <partial name="_PwaInstallBanner" />
 
-            <h2 class="form-title-auth">Recuperar Contraseña</h2>
-            <p class="auth-instruction">
-                Ingresá tu correo electrónico registrado y te enviaremos las instrucciones para restablecer tu contraseña.
-            </p>
-            
-            <form id="formRecupero" class="auth-form">
-                <div class="input-field-auth">
-                    <label for="emailRecupero">Correo Electrónico</label>
-                    <input type="email" id="emailRecupero" name="emailRecupero" placeholder="ejemplo@ies124.edu.ar" required autocomplete="off">
-                </div>
-                
-                <div class="button-container-auth">
-                    <button type="submit" class="btn-enviar-recupero">Enviar Enlace</button>
-                </div>
-            </form>
+    <div class="login-card">
+        <div class="logo-container">
+            <img src="~/images/logo.png" alt="IS 124 Logo" class="logo-img">
+        </div>
 
-            <div class="auth-footer-links">
-                <a href="index.html" class="link-volver">← Volver al Login</a>
-            </div>
-        </main>
+        <h2 class="form-title-auth" style="text-align:center; margin: 0 0 16px;">Recuperar Contraseña</h2>
 
+        <p class="auth-instruction" style="text-align:center; margin: 0 0 20px; color:#475569;">
+            Por ahora el restablecimiento de contraseña no es automático: no hay un servicio de
+            envío de mails configurado en el sistema todavía.
+            <br><br>
+            Pedile a un <strong>Administrador</strong> del instituto que te restablezca la
+            contraseña desde el panel de Usuarios — te la deja igual a tu DNI, como cuando te
+            dieron de alta la primera vez, y el sistema te va a pedir que la cambies apenas
+            vuelvas a entrar.
+        </p>
+
+        <div class="link-container">
+            <a asp-controller="Account" asp-action="Login" class="forgot-password">← Volver al inicio de sesión</a>
+        </div>
     </div>
 
-    <script src="script.js"></script>
+    <script src="~/js/script.js" asp-append-version="true"></script>
 </body>
 </html>

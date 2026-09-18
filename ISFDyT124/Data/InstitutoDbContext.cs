@@ -133,6 +133,15 @@ namespace ISFDyT124.Data
                 .HasForeignKey(ur => ur.RoId)
                 .OnDelete(DeleteBehavior.NoAction);
 
+            // Índice único filtrado: AsClientGuid es nullable (solo los registros que
+            // llegaron por la cola offline lo traen), y SQL Server trata NULL como valor
+            // comparable en un índice único — sin el filtro, dos filas cargadas online
+            // (sin GUID) chocarían entre sí como si fueran duplicadas.
+            modelBuilder.Entity<Asistencia>()
+                .HasIndex(a => a.AsClientGuid)
+                .IsUnique()
+                .HasFilter("[AsClientGuid] IS NOT NULL");
+
             // Relación ASISTENCIAS -> USUARIOS (Alumno) y MATERIAS
             modelBuilder.Entity<Asistencia>()
                 .HasOne(a => a.Usuario)

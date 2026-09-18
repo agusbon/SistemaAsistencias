@@ -4,6 +4,7 @@ using ISFDyT124.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ISFDyT124.Migrations
 {
     [DbContext(typeof(InstitutoDbContext))]
-    partial class InstitutoDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260913004717_AgregarPorcentajeAsistenciaMateria")]
+    partial class AgregarPorcentajeAsistenciaMateria
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -30,13 +33,7 @@ namespace ISFDyT124.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("AsId"));
 
-                    b.Property<Guid?>("AsClientGuid")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<DateTime>("AsFecha")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("AsFechaCarga")
                         .HasColumnType("datetime2");
 
                     b.Property<bool>("AsJustificacion")
@@ -55,10 +52,6 @@ namespace ISFDyT124.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("AsId");
-
-                    b.HasIndex("AsClientGuid")
-                        .IsUnique()
-                        .HasFilter("[AsClientGuid] IS NOT NULL");
 
                     b.HasIndex("CaMaId");
 
@@ -90,10 +83,7 @@ namespace ISFDyT124.Migrations
             modelBuilder.Entity("ISFDyT124.Models.CarreraCohorte", b =>
                 {
                     b.Property<int>("CaCoId")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("CaCoId"));
 
                     b.Property<int>("CaId")
                         .HasColumnType("int");
@@ -103,10 +93,9 @@ namespace ISFDyT124.Migrations
 
                     b.HasKey("CaCoId");
 
-                    b.HasIndex("CoId");
+                    b.HasIndex("CaId");
 
-                    b.HasIndex("CaId", "CoId")
-                        .IsUnique();
+                    b.HasIndex("CoId");
 
                     b.ToTable("CarreraCohortes");
                 });
@@ -119,7 +108,7 @@ namespace ISFDyT124.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("CaMaId"));
 
-                    b.Property<int?>("CaCoId")
+                    b.Property<int>("CaId")
                         .HasColumnType("int");
 
                     b.Property<int>("MaId")
@@ -127,11 +116,9 @@ namespace ISFDyT124.Migrations
 
                     b.HasKey("CaMaId");
 
-                    b.HasIndex("MaId");
+                    b.HasIndex("CaId");
 
-                    b.HasIndex("CaCoId", "MaId")
-                        .IsUnique()
-                        .HasFilter("[CaCoId] IS NOT NULL");
+                    b.HasIndex("MaId");
 
                     b.ToTable("CarreraMateria", (string)null);
                 });
@@ -170,8 +157,7 @@ namespace ISFDyT124.Migrations
 
                     b.HasIndex("CaMaId");
 
-                    b.HasIndex("UsId", "CaMaId")
-                        .IsUnique();
+                    b.HasIndex("UsId");
 
                     b.ToTable("Inscripciones");
                 });
@@ -196,6 +182,9 @@ namespace ISFDyT124.Migrations
                         .IsRequired()
                         .HasMaxLength(25)
                         .HasColumnType("nvarchar(25)");
+
+                    b.Property<int>("MaPorcentajeAsistenciaMinima")
+                        .HasColumnType("int");
 
                     b.HasKey("MaId");
 
@@ -242,8 +231,7 @@ namespace ISFDyT124.Migrations
 
                     b.Property<string>("UsEmail")
                         .IsRequired()
-                        .HasMaxLength(254)
-                        .HasColumnType("nvarchar(254)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("UsNombre")
                         .IsRequired()
@@ -342,10 +330,11 @@ namespace ISFDyT124.Migrations
 
             modelBuilder.Entity("ISFDyT124.Models.CarreraMateria", b =>
                 {
-                    b.HasOne("ISFDyT124.Models.CarreraCohorte", "CarreraCohorte")
+                    b.HasOne("ISFDyT124.Models.Carrera", "Carrera")
                         .WithMany("CarreraMaterias")
-                        .HasForeignKey("CaCoId")
-                        .OnDelete(DeleteBehavior.SetNull);
+                        .HasForeignKey("CaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.HasOne("ISFDyT124.Models.Materia", "Materia")
                         .WithMany("CarreraMaterias")
@@ -353,7 +342,7 @@ namespace ISFDyT124.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("CarreraCohorte");
+                    b.Navigation("Carrera");
 
                     b.Navigation("Materia");
                 });
@@ -399,7 +388,7 @@ namespace ISFDyT124.Migrations
                     b.HasOne("ISFDyT124.Models.Rol", "Rol")
                         .WithMany("UsuarioRoles")
                         .HasForeignKey("RoId")
-                        .OnDelete(DeleteBehavior.NoAction)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("ISFDyT124.Models.Usuario", "Usuario")
@@ -431,10 +420,7 @@ namespace ISFDyT124.Migrations
             modelBuilder.Entity("ISFDyT124.Models.Carrera", b =>
                 {
                     b.Navigation("CarreraCohortes");
-                });
 
-            modelBuilder.Entity("ISFDyT124.Models.CarreraCohorte", b =>
-                {
                     b.Navigation("CarreraMaterias");
                 });
 
