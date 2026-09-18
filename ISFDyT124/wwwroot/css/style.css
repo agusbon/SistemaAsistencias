@@ -1500,6 +1500,8 @@ body {
     margin-bottom: 30px;
     display: flex;
     flex-direction: column;
+    min-width: 0; /* Sin esto, un <select> con una opción larga (nombre de carrera) fuerza
+                     el ancho del ítem de grilla más allá de la pantalla en celulares. */
 }
 
 .input-field label {
@@ -1642,6 +1644,8 @@ body {
     margin-bottom: 30px;
     display: flex;
     flex-direction: column;
+    min-width: 0; /* Sin esto, un <select> con una opción larga (nombre de carrera) fuerza
+                     el ancho del ítem de grilla más allá de la pantalla en celulares. */
 }
 .input-field label {
     font-family: 'Inter', sans-serif;
@@ -1666,6 +1670,8 @@ body {
     outline: none;
     background: transparent;
     transition: border-color 0.3s ease;
+    width: 100%;
+    min-width: 0;
 }
 /* Estilo premium exclusivo para adaptar las listas desplegables */
 .input-field select {
@@ -1676,6 +1682,9 @@ body {
     background-position: right center;
     background-size: 16px;
     padding-right: 20px;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
 }
 /* Input exclusivo de lectura para el nombre del alumno (estilo dashed) */
 .input-field input[readonly] {
