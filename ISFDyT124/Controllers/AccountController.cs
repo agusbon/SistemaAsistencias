@@ -106,9 +106,15 @@ namespace ISFDyT124.Controllers
             );
             var principal = new ClaimsPrincipal(identity);
 
+            // IsPersistent: sin esto la cookie es "de sesión de navegador" y Android la borra
+            // apenas el docente cierra la PWA, obligándolo a loguearse de nuevo al reabrirla.
+            // En un aula sin señal eso lo dejaba afuera del sistema (no se puede validar la
+            // contraseña sin llegar al servidor). Con la cookie persistida, la sesión sobrevive
+            // al cierre de la app y puede tomar asistencia sin conexión.
             await HttpContext.SignInAsync(
                 CookieAuthenticationDefaults.AuthenticationScheme,
-                principal
+                principal,
+                new AuthenticationProperties { IsPersistent = true }
             );
 
             // CAMBIO: ya no se puede comparar el DNI contra el hash guardado como strings

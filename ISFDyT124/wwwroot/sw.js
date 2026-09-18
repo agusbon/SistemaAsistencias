@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'is124-v3';
+const CACHE_VERSION = 'is124-v4';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 // A propósito NO atada a CACHE_VERSION: acá se va acumulando cada pantalla real
 // que el docente visitó con señal. Si la atamos a la versión, cada vez que
@@ -29,7 +29,14 @@ const APP_SHELL = [
 self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(STATIC_CACHE)
-            .then((cache) => cache.addAll(APP_SHELL))
+            // Uno por uno en vez de addAll: addAll rechaza TODO si falla un solo archivo, y
+            // entonces la instalación fracasa y el Service Worker nunca se activa — la app
+            // queda sin ninguna capacidad offline por culpa de un archivo suelto.
+            .then((cache) =>
+                Promise.all(
+                    APP_SHELL.map((recurso) => cache.add(recurso).catch(() => null))
+                )
+            )
             .then(() => self.skipWaiting())
     );
 });
@@ -61,27 +68,26 @@ self.addEventListener('fetch', (event) => {
         event.respondWith(
             fetch(request)
                 .then((response) => {
-                    const copy = response.clone();
-                    caches.open(PAGES_CACHE).then((cache) => cache.put(request, copy));
+                    // Solo se guardan respuestas OK y NO redirigidas: cache.put tira TypeError
+                    // con una respuesta redirigida (ej. el 302 al login cuando venció la sesión),
+                    // y sin este chequeo quedaba una promesa rechazada suelta y la pantalla
+                    // nunca terminaba de guardarse.
+                    if (response.ok && !response.redirected) {
+                        const copy = response.clone();
+                        // waitUntil: sin esto el navegador puede matar al Service Worker apenas
+                        // devuelve la respuesta (pasa seguido en celulares) y el guardado queda
+                        // a medias — por eso a veces parecía que una pantalla ya visitada no
+                        // estaba cacheada.
+                        event.waitUntil(
+                            caches
+                                .open(PAGES_CACHE)
+                                .then((cache) => cache.put(request, copy))
+                                .catch(() => null)
+                        );
+                    }
                     return response;
                 })
-                .catch(() =>
-                    caches.match(request).then((cached) => {
-                        if (cached) return cached;
-                        // El start_url de la PWA instalada (manifest.json) pide "/?source=pwa" —
-                        // esa URL exacta nunca se cachea sola si el docente siempre entró por
-                        // "Inicio" del menú (que pide "/" sin ese parámetro). Sin esto, abrir el
-                        // ícono instalado en frío sin señal siempre caía al cartel de "sin
-                        // conexión" aunque la sesión ya estuviera guardada y "/" sí tuviera una
-                        // copia cacheada de antes.
-                        if (url.pathname === '/') {
-                            return caches
-                                .match('/', { ignoreSearch: true })
-                                .then((home) => home || caches.match('/offline.html'));
-                        }
-                        return caches.match('/offline.html');
-                    })
-                )
+                .catch(() => responderDesdeCache(request, url))
         );
         return;
     }
@@ -105,4 +111,37 @@ self.addEventListener('fetch', (event) => {
 
 function STATIC_CACHE_EXTENSIONS(pathname) {
     return /\.(css|js|png|jpg|jpeg|svg|ico|woff2?|ttf)$/i.test(pathname);
+}
+
+/// Busca la mejor copia guardada para una navegación que no llegó a la red.
+/// SIEMPRE devuelve una Response de verdad: si devolviera undefined (que es lo que pasaba
+/// cuando offline.html tampoco estaba en el cache), el navegador lo interpreta como error
+/// de red y muestra SU propia pantalla de "sin conexión" en vez de la nuestra.
+async function responderDesdeCache(request, url) {
+    const exacta = await caches.match(request);
+    if (exacta) return exacta;
+
+    if (url.pathname === '/') {
+        // El start_url de la PWA instalada (manifest.json) pide "/?source=pwa" — esa URL exacta
+        // nunca se cachea sola si el docente siempre entró por "Inicio" del menú (que pide "/").
+        const inicio = await caches.match('/', { ignoreSearch: true });
+        if (inicio) return inicio;
+
+        // Sin sesión activa la app manda al login: mostrar esa pantalla es más útil que un
+        // cartel genérico, al menos se ve la app y no un error del navegador.
+        const login = await caches.match('/Account/Login', { ignoreSearch: true });
+        if (login) return login;
+    }
+
+    const offline = await caches.match('/offline.html');
+    if (offline) return offline;
+
+    return new Response(
+        '<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">' +
+            '<meta name="viewport" content="width=device-width, initial-scale=1"><title>Sin conexión</title>' +
+            '</head><body style="font-family:sans-serif;text-align:center;padding:40px;color:#002e8c">' +
+            '<h1>Sin conexión</h1><p style="color:#64748b">Esta pantalla todavía no quedó guardada en el ' +
+            'dispositivo. Abrila una vez con señal y va a estar disponible sin conexión.</p></body></html>',
+        { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8' } }
+    );
 }

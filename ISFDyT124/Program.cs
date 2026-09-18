@@ -35,7 +35,11 @@ builder
         {
             options.LoginPath = "/Account/Login"; // Ruta a la p�gina de login para redirecci�n en caso de no autenticado
             options.LogoutPath = "/Account/Salir"; // Ruta para cerrar sesi�n
-            options.ExpireTimeSpan = TimeSpan.FromMinutes(30); // Tiempo de expiraci�n de la cookie (30 minutos)
+            // 30 días (antes 30 minutos): ahora que la cookie se persiste, este es el tiempo
+            // real que el docente puede estar sin llegar al servidor y seguir logueado. Con 30
+            // minutos, alguien que se logueaba con wifi a la mañana y llegaba al aula sin señal
+            // un par de horas después ya aparecía deslogueado y no podía tomar asistencia.
+            options.ExpireTimeSpan = TimeSpan.FromDays(30);
             options.SlidingExpiration = true; // Renueva el tiempo de expiraci�n al solicitar recursos si el usuario est� activo
             options.AccessDeniedPath = "/Home/Privacy"; // Ruta a la que redirige si el usuario no tiene permisos
 
