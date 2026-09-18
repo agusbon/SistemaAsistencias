@@ -4,6 +4,7 @@ using ISFDyT124.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ISFDyT124.Migrations
 {
     [DbContext(typeof(InstitutoDbContext))]
-    partial class InstitutoDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260916233710_AgregarIndicesUnicos")]
+    partial class AgregarIndicesUnicos
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -80,10 +83,7 @@ namespace ISFDyT124.Migrations
             modelBuilder.Entity("ISFDyT124.Models.CarreraCohorte", b =>
                 {
                     b.Property<int>("CaCoId")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("CaCoId"));
 
                     b.Property<int>("CaId")
                         .HasColumnType("int");
@@ -109,7 +109,7 @@ namespace ISFDyT124.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("CaMaId"));
 
-                    b.Property<int?>("CaCoId")
+                    b.Property<int>("CaId")
                         .HasColumnType("int");
 
                     b.Property<int>("MaId")
@@ -119,9 +119,8 @@ namespace ISFDyT124.Migrations
 
                     b.HasIndex("MaId");
 
-                    b.HasIndex("CaCoId", "MaId")
-                        .IsUnique()
-                        .HasFilter("[CaCoId] IS NOT NULL");
+                    b.HasIndex("CaId", "MaId")
+                        .IsUnique();
 
                     b.ToTable("CarreraMateria", (string)null);
                 });
@@ -332,10 +331,11 @@ namespace ISFDyT124.Migrations
 
             modelBuilder.Entity("ISFDyT124.Models.CarreraMateria", b =>
                 {
-                    b.HasOne("ISFDyT124.Models.CarreraCohorte", "CarreraCohorte")
+                    b.HasOne("ISFDyT124.Models.Carrera", "Carrera")
                         .WithMany("CarreraMaterias")
-                        .HasForeignKey("CaCoId")
-                        .OnDelete(DeleteBehavior.SetNull);
+                        .HasForeignKey("CaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.HasOne("ISFDyT124.Models.Materia", "Materia")
                         .WithMany("CarreraMaterias")
@@ -343,7 +343,7 @@ namespace ISFDyT124.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("CarreraCohorte");
+                    b.Navigation("Carrera");
 
                     b.Navigation("Materia");
                 });
@@ -421,10 +421,7 @@ namespace ISFDyT124.Migrations
             modelBuilder.Entity("ISFDyT124.Models.Carrera", b =>
                 {
                     b.Navigation("CarreraCohortes");
-                });
 
-            modelBuilder.Entity("ISFDyT124.Models.CarreraCohorte", b =>
-                {
                     b.Navigation("CarreraMaterias");
                 });
 

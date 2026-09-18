@@ -34,17 +34,34 @@ namespace ISFDyT124.Data
             modelBuilder.Entity<Usuario>().Property(u => u.UsId).ValueGeneratedNever();
             //modelBuilder.Entity<UsuarioRol>().Property(ur => ur.UsRoId).ValueGeneratedNever();
             //modelBuilder.Entity<Login>().Property(l => l.LoId).ValueGeneratedNever();
-            // Materia, Carrera y Asistencia pasaron a IDENTITY (columna autoincremental en SQL Server)
+            // Materia, Carrera, Asistencia y CarreraMateria pasaron a IDENTITY (columna
+            // autoincremental en SQL Server). CarreraCohorte se suma ahora a esa misma
+            // conversión: quedaba como la única de esa familia con PK manual, lo que
+            // obligaba a calcular el próximo ID a mano en cualquier alta (causa real de
+            // un bug encontrado en el backfill de CarreraMateria.CaCoId) y va a hacer
+            // falta de nuevo apenas exista el alta real de CarreraCohorte (ticket 4.12).
             //modelBuilder.Entity<Cohorte>().Property(co => co.CoId).ValueGeneratedNever();
-            //modelBuilder.Entity<CarreraCohorte>().Property(cc => cc.CaCoId).ValueGeneratedNever();
             modelBuilder.Entity<CarreraMateria>().ToTable("CarreraMateria");
             modelBuilder.Entity<CarreraMateria>().Property(cm => cm.CaMaId).ValueGeneratedOnAdd();
-            modelBuilder.Entity<CarreraCohorte>().Property(cc => cc.CaCoId).ValueGeneratedNever();
+            modelBuilder.Entity<CarreraCohorte>().Property(cc => cc.CaCoId).ValueGeneratedOnAdd();
             modelBuilder.Entity<Cohorte>().Property(co => co.CoId).ValueGeneratedNever();
             modelBuilder.Entity<UsuarioRol>().Property(ur => ur.UsRoId).ValueGeneratedNever();
 
             // Configurar DNI único de la tabla USUARIOS
             modelBuilder.Entity<Usuario>().HasIndex(u => u.UsDni).IsUnique();
+
+            // Restricciones de unicidad (ticket 4.14): nada más impedía cargar la misma
+            // combinación dos veces. Requiere que la base ya esté libre de duplicados.
+            // Filtrado (WHERE CaCoId IS NOT NULL): CaCoId es opcional mientras una cátedra
+            // no tenga cohorte asignada todavía (ticket 4.12); SQL Server trata NULL como
+            // valor comparable en un índice único, así que sin el filtro dos cátedras sin
+            // cohorte asignada de la misma materia chocarían entre sí.
+            modelBuilder.Entity<CarreraMateria>()
+                .HasIndex(cm => new { cm.CaCoId, cm.MaId })
+                .IsUnique()
+                .HasFilter("[CaCoId] IS NOT NULL");
+            modelBuilder.Entity<Inscripciones>().HasIndex(i => new { i.UsId, i.CaMaId }).IsUnique();
+            modelBuilder.Entity<CarreraCohorte>().HasIndex(cc => new { cc.CaId, cc.CoId }).IsUnique();
 
             // Configuración de las Relaciones y Claves Foráneas
 
@@ -81,12 +98,16 @@ namespace ISFDyT124.Data
                 .HasForeignKey(cc => cc.CoId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // Relación CARRERA_MATERIA -> CARRERAS y MATERIAS
+            // Relación CARRERA_MATERIA -> CARRERA_COHORTE y MATERIAS. Una cátedra (Carrera+Materia)
+            // queda atada a una cohorte concreta: "Inglés I" de la cohorte 2025 es una cátedra
+            // distinta de "Inglés I" de la cohorte 2026. CaCoId es opcional (SetNull) para no
+            // bloquear el borrado de una CarreraCohorte ni forzar a elegir cohorte al crear la
+            // cátedra (ticket 4.12 todavía no tiene alta de Cohorte/CarreraCohorte terminada).
             modelBuilder.Entity<CarreraMateria>()
-                .HasOne(cm => cm.Carrera)
-                .WithMany(c => c.CarreraMaterias)
-                .HasForeignKey(cm => cm.CaId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .HasOne(cm => cm.CarreraCohorte)
+                .WithMany(cc => cc.CarreraMaterias)
+                .HasForeignKey(cm => cm.CaCoId)
+                .OnDelete(DeleteBehavior.SetNull);
 
             modelBuilder.Entity<CarreraMateria>()
                 .HasOne(cm => cm.Materia)

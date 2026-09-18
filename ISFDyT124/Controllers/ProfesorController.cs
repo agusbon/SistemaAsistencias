@@ -45,9 +45,11 @@ namespace ISFDyT124.Controllers
                 .Select(cm => new CarreraMateriaDetalleDto
                 {
                     CaMaId = cm.CaMaId,
-                    CaId = cm.CaId,
+                    CaCoId = cm.CaCoId,
                     MaId = cm.MaId,
-                    CarreraDenominacion = cm.Carrera != null ? cm.Carrera.CaDenominacion : "-",
+                    CarreraDenominacion = cm.CarreraCohorte != null && cm.CarreraCohorte.Carrera != null
+                        ? cm.CarreraCohorte.Carrera.CaDenominacion
+                        : "-",
                     MateriaDenominacion = cm.Materia != null ? cm.Materia.MaDenominacion : "-",
                 })
                 .OrderBy(c => c.CarreraDenominacion)
@@ -81,7 +83,8 @@ namespace ISFDyT124.Controllers
             }
 
             var catedra = await _context
-                .CarreraMaterias.Include(cm => cm.Carrera)
+                .CarreraMaterias.Include(cm => cm.CarreraCohorte)
+                .ThenInclude(cc => cc!.Carrera)
                 .Include(cm => cm.Materia)
                 .FirstOrDefaultAsync(cm => cm.CaMaId == caMaId);
 
@@ -93,7 +96,7 @@ namespace ISFDyT124.Controllers
             ViewBag.CaMaId = caMaId;
             ViewBag.MateriaId = maId;
             ViewBag.Fecha = fechaFiltro;
-            ViewBag.CarreraNombre = catedra.Carrera?.CaDenominacion ?? "Carrera";
+            ViewBag.CarreraNombre = catedra.CarreraCohorte?.Carrera?.CaDenominacion ?? "Carrera";
             ViewBag.MateriaNombre = catedra.Materia?.MaDenominacion ?? "Materia";
             ViewBag.CantModulos = catedra.Materia?.MaCantModulos ?? 1;
 
