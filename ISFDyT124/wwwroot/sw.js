@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'is124-v2';
+const CACHE_VERSION = 'is124-v3';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const PAGES_CACHE = `${CACHE_VERSION}-pages`;
 
@@ -57,7 +57,21 @@ self.addEventListener('fetch', (event) => {
                     return response;
                 })
                 .catch(() =>
-                    caches.match(request).then((cached) => cached || caches.match('/offline.html'))
+                    caches.match(request).then((cached) => {
+                        if (cached) return cached;
+                        // El start_url de la PWA instalada (manifest.json) pide "/?source=pwa" —
+                        // esa URL exacta nunca se cachea sola si el docente siempre entró por
+                        // "Inicio" del menú (que pide "/" sin ese parámetro). Sin esto, abrir el
+                        // ícono instalado en frío sin señal siempre caía al cartel de "sin
+                        // conexión" aunque la sesión ya estuviera guardada y "/" sí tuviera una
+                        // copia cacheada de antes.
+                        if (url.pathname === '/') {
+                            return caches
+                                .match('/', { ignoreSearch: true })
+                                .then((home) => home || caches.match('/offline.html'));
+                        }
+                        return caches.match('/offline.html');
+                    })
                 )
         );
         return;
