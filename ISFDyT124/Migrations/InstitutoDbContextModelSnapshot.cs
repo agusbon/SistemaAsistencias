@@ -187,9 +187,6 @@ namespace ISFDyT124.Migrations
                         .HasMaxLength(25)
                         .HasColumnType("nvarchar(25)");
 
-                    b.Property<int>("MaPorcentajeAsistenciaMinima")
-                        .HasColumnType("int");
-
                     b.HasKey("MaId");
 
                     b.ToTable("Materias");

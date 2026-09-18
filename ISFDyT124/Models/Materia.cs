@@ -33,12 +33,6 @@ namespace ISFDyT124.Models
         [Display(Name = "Cantidad de Módulos")]
         public int? MaCantModulos { get; set; }
 
-        // Porcentaje mínimo de asistencia que necesita un alumno para regularizar la materia.
-        [Required(ErrorMessage = "Debe ingresar el porcentaje mínimo de asistencia.")]
-        [Range(0, 100, ErrorMessage = "El porcentaje debe estar entre 0 y 100.")]
-        [Display(Name = "% Asistencia Mínima")]
-        public int? MaPorcentajeAsistenciaMinima { get; set; }
-
         // RELACION
         public virtual ICollection<CarreraMateria>? CarreraMaterias { get; set; }
         public virtual ICollection<Asistencia>? Asistencias { get; set; }
