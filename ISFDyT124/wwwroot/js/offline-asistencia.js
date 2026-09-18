@@ -1,5 +1,8 @@
 // Cola offline de asistencia (frente 7 / PWA). Ver documentacion/Gustavo-EDT-offline-pwa.md
 // para el plan completo. Depende de Dexie.js (wwwroot/lib/dexie).
+//
+// Funciona en silencio, sin banners ni botones: si no hay señal al guardar, se encola
+// acá; apenas el dispositivo recupera conexión, se sincroniza sola.
 (function () {
     if (typeof Dexie === 'undefined') return; // Si no cargó la librería, no rompemos el resto de la página.
 
@@ -45,15 +48,13 @@
         return registros.length;
     }
 
-    async function contarPendientes() {
-        return db.pendientes.where('enviado').equals(0).count();
-    }
-
-    /// Manda al servidor lo que esté pendiente. No asume que todo salga bien: cada fila
-    /// se marca enviada según lo que responda el servidor, nunca por adelantado.
+    /// Manda al servidor lo que esté pendiente, sin avisar nada en pantalla. Si falla (sigue
+    /// sin señal, o la sesión venció mientras tanto), la cola queda intacta y se reintenta
+    /// solo en el próximo evento 'online' o la próxima vez que se abra la app — no se pierde
+    /// nada, cada fila se marca enviada únicamente si el servidor confirmó haberla guardado.
     async function sincronizarPendientes() {
         var pendientes = await db.pendientes.where('enviado').equals(0).toArray();
-        if (pendientes.length === 0) return { enviados: 0, fallidos: 0 };
+        if (pendientes.length === 0) return;
 
         var token = getAntiforgeryToken();
         var body = pendientes.map(function (p) {
@@ -79,61 +80,29 @@
                 body: JSON.stringify(body),
             });
         } catch (e) {
-            // Sin conexión todavía (o se cortó de nuevo a mitad de camino) — se reintenta
-            // la próxima vez que dispare el evento 'online' o el botón manual.
-            return { enviados: 0, fallidos: pendientes.length, sinConexion: true };
+            return; // Sin conexión todavía — se reintenta después.
         }
 
-        if (!respuesta.ok) {
-            // 401 (sesión vencida mientras el dispositivo estaba offline) u otro error del
-            // servidor: se deja todo en la cola tal cual, no se pierde nada — el docente
-            // vuelve a loguearse y aprieta "Sincronizar ahora" de nuevo, sin tener que
-            // volver a cargar la asistencia.
-            return {
-                enviados: 0,
-                fallidos: pendientes.length,
-                statusHttp: respuesta.status,
-                sesionVencida: respuesta.status === 401,
-            };
-        }
+        if (!respuesta.ok) return; // 401 u otro error: se deja todo en la cola, se reintenta después.
 
         var resultados = await respuesta.json();
-        var enviados = 0;
         for (var i = 0; i < resultados.length; i++) {
-            var r = resultados[i];
-            if (r.ok) {
-                await db.pendientes.where('clientGuid').equals(r.clientGuid).modify({ enviado: 1 });
-                enviados++;
+            if (resultados[i].ok) {
+                await db.pendientes.where('clientGuid').equals(resultados[i].clientGuid).modify({ enviado: 1 });
             }
         }
         // Limpieza: no tiene sentido acumular filas ya enviadas para siempre en el dispositivo.
         await db.pendientes.where('enviado').equals(1).delete();
-
-        return { enviados: enviados, fallidos: pendientes.length - enviados };
-    }
-
-    // Envuelve sincronizarPendientes para que cualquier disparador (evento 'online', carga
-    // de página, botón manual) avise por un evento propio — así la pantalla que esté abierta
-    // puede actualizar el banner de pendientes/sesión vencida sin importar quién disparó la
-    // sincronización.
-    async function sincronizarYAvisar() {
-        var resultado = await sincronizarPendientes();
-        window.dispatchEvent(new CustomEvent('offline-asistencia:sync', { detail: resultado }));
-        return resultado;
     }
 
     window.OfflineAsistencia = {
         encolarAsistencia: encolarAsistencia,
-        contarPendientes: contarPendientes,
-        sincronizarPendientes: sincronizarYAvisar,
     };
 
-    // Sincronización automática al recuperar señal + al cargar cualquier página logueada
-    // como docente (por si ya había señal pero el evento 'online' nunca llegó a disparar).
-    window.addEventListener('online', function () {
-        sincronizarYAvisar();
-    });
+    // Sincronización automática al recuperar señal + al cargar la página (por si ya había
+    // señal pero el evento 'online' nunca llegó a disparar). Todo en silencio.
+    window.addEventListener('online', sincronizarPendientes);
     document.addEventListener('DOMContentLoaded', function () {
-        if (navigator.onLine) sincronizarYAvisar();
+        if (navigator.onLine) sincronizarPendientes();
     });
 })();

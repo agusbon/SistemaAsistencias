@@ -2416,36 +2416,3 @@ html.pwa-standalone body {
     }
 }
 
-/* Banner de asistencia pendiente de sincronizar (frente 7 / PWA offline).
-   Mismo criterio de forma que .alerta-error, en tono ámbar (es un aviso, no un error). */
-.offline-pendientes-banner {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    background-color: #fffbeb;
-    border: 1px solid #fcd34d;
-    color: #92400e;
-    padding: 12px 16px;
-    border-radius: 8px;
-    margin-bottom: 16px;
-    font-size: 14px;
-    width: 100%;
-    box-sizing: border-box;
-}
-
-.btn-sincronizar-offline {
-    background-color: var(--primary-color);
-    color: #fff;
-    border: none;
-    border-radius: 6px;
-    padding: 8px 14px;
-    font-size: 13px;
-    cursor: pointer;
-    white-space: nowrap;
-}
-
-.btn-sincronizar-offline:disabled {
-    opacity: 0.6;
-    cursor: default;
-}
