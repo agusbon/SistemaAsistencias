@@ -61,6 +61,13 @@ namespace ISFDyT124.Controllers.Api
 
             var resultados = new List<SincronizarResultadoItemDto>();
 
+            // Filas ya tocadas en ESTE mismo lote. Sin esto se duplicaba: el chequeo de más
+            // abajo consulta la base, pero SaveChanges recién corre al final del bucle, así que
+            // al procesar una segunda tanda del mismo alumno/materia/fecha (la cola manda todo
+            // lo pendiente junto) la fila agregada un momento antes todavía no estaba en la base
+            // y se insertaba de nuevo. Si el mismo día viene repetido, vale la última carga.
+            var enEsteLote = new Dictionary<(int? UsId, int MaId, DateTime Fecha), Asistencia>();
+
             foreach (var dto in registros)
             {
                 if (!materiasPermitidas.Contains(dto.MaId))
@@ -101,12 +108,17 @@ namespace ISFDyT124.Controllers.Api
                 //    docente (u otro con acceso a la misma cátedra) ya cargó ese alumno+materia+
                 //    fecha por otra vía mientras el dispositivo estaba offline, se actualiza esa
                 //    fila en vez de duplicarla.
-                var existente = await _context.Asistencias.FirstOrDefaultAsync(a =>
-                    a.UsId == dto.UsId
-                    && a.MaId == dto.MaId
-                    && a.AsFecha != null
-                    && a.AsFecha.Value.Date == dto.Fecha.Date
-                );
+                var clave = (dto.UsId, dto.MaId, dto.Fecha.Date);
+
+                if (!enEsteLote.TryGetValue(clave, out var existente))
+                {
+                    existente = await _context.Asistencias.FirstOrDefaultAsync(a =>
+                        a.UsId == dto.UsId
+                        && a.MaId == dto.MaId
+                        && a.AsFecha != null
+                        && a.AsFecha.Value.Date == dto.Fecha.Date
+                    );
+                }
 
                 if (existente != null)
                 {
@@ -117,19 +129,20 @@ namespace ISFDyT124.Controllers.Api
                 }
                 else
                 {
-                    _context.Asistencias.Add(
-                        new Asistencia
-                        {
-                            AsFecha = dto.Fecha.Date,
-                            AsFechaCarga = dto.FechaCarga,
-                            AsPresente = dto.Presente,
-                            AsJustificacion = justificado,
-                            UsId = dto.UsId,
-                            MaId = dto.MaId,
-                            AsClientGuid = dto.ClientGuid,
-                        }
-                    );
+                    existente = new Asistencia
+                    {
+                        AsFecha = dto.Fecha.Date,
+                        AsFechaCarga = dto.FechaCarga,
+                        AsPresente = dto.Presente,
+                        AsJustificacion = justificado,
+                        UsId = dto.UsId,
+                        MaId = dto.MaId,
+                        AsClientGuid = dto.ClientGuid,
+                    };
+                    _context.Asistencias.Add(existente);
                 }
+
+                enEsteLote[clave] = existente;
 
                 resultados.Add(new SincronizarResultadoItemDto { ClientGuid = dto.ClientGuid, Ok = true });
             }

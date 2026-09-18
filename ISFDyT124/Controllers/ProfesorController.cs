@@ -140,7 +140,13 @@ namespace ISFDyT124.Controllers
                 })
                 .ToListAsync();
 
-            ViewBag.AsistenciasExistentes = existentes.ToDictionary(a => a.UsId ?? 0);
+            // Agrupado por alumno en vez de ToDictionary directo: si quedaron dos filas del
+            // mismo alumno para esta materia y fecha (pasó al sincronizar dos tandas de la cola
+            // offline juntas, y puede pasar con datos viejos), ToDictionary tiraba excepción y
+            // se caía toda la pantalla con un error 500. Se toma la más reciente y sigue.
+            ViewBag.AsistenciasExistentes = existentes
+                .GroupBy(a => a.UsId ?? 0)
+                .ToDictionary(g => g.Key, g => g.OrderByDescending(a => a.AsId).First());
 
             return View(alumnos);
         }
