@@ -19,6 +19,13 @@ builder.Services.AddDbContext<InstitutoDbContext>(options =>
 // Aade controladores con vistas para MVC
 builder.Services.AddControllersWithViews();
 
+// El antiforgery clásico espera el token en un campo de formulario HTML
+// (__RequestVerificationToken), pensado para submits normales. La cola offline
+// sincroniza vía fetch() con JSON, así que en vez de eso el token viaja en este
+// header — [ValidateAntiForgeryToken] lo sigue validando igual, solo cambia de dónde
+// lo lee.
+builder.Services.AddAntiforgery(options => options.HeaderName = "X-CSRF-TOKEN");
+
 // Configura la autenticaci�n basada en cookies
 builder
     .Services.AddAuthentication("Cookies") // Define el esquema de autenticaci�n llamado "Cookies"
@@ -31,6 +38,34 @@ builder
             options.ExpireTimeSpan = TimeSpan.FromMinutes(30); // Tiempo de expiraci�n de la cookie (30 minutos)
             options.SlidingExpiration = true; // Renueva el tiempo de expiraci�n al solicitar recursos si el usuario est� activo
             options.AccessDeniedPath = "/Home/Privacy"; // Ruta a la que redirige si el usuario no tiene permisos
+
+            // Sin esto, un fetch() a /api/* con la cookie vencida recibe un 302 a
+            // /Account/Login (HTML) en vez de un 401 — el JS de sincronización no
+            // puede reaccionar bien a eso. Para rutas /api devolvemos el status code
+            // crudo; el resto de la app sigue redirigiendo como siempre.
+            options.Events = new Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationEvents
+            {
+                OnRedirectToLogin = context =>
+                {
+                    if (context.Request.Path.StartsWithSegments("/api"))
+                    {
+                        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                        return Task.CompletedTask;
+                    }
+                    context.Response.Redirect(context.RedirectUri);
+                    return Task.CompletedTask;
+                },
+                OnRedirectToAccessDenied = context =>
+                {
+                    if (context.Request.Path.StartsWithSegments("/api"))
+                    {
+                        context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                        return Task.CompletedTask;
+                    }
+                    context.Response.Redirect(context.RedirectUri);
+                    return Task.CompletedTask;
+                },
+            };
         }
     );
 

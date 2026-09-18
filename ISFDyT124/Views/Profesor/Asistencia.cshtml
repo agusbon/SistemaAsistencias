@@ -14,6 +14,11 @@
 
 <main class="main-container-asistencia">
 
+    <div id="offlinePendientesBanner" class="offline-pendientes-banner" hidden>
+        <span id="offlinePendientesTexto"></span>
+        <button type="button" id="offlineSincronizarBtn" class="btn-sincronizar-offline">Sincronizar ahora</button>
+    </div>
+
     <div class="info-banner">
         <div class="info-col-left">
             <p>@fecha.ToString("dd/MM/yyyy")</p>
@@ -25,7 +30,7 @@
         </div>
     </div>
 
-    <form asp-action="Asistencia" method="post">
+    <form asp-action="Asistencia" method="post" id="formAsistencia" data-offline-asistencia="true">
         @Html.AntiForgeryToken()
         <input type="hidden" name="maId" value="@maId" />
         <input type="hidden" name="fecha" value="@fecha.ToString("yyyy-MM-dd")" />
@@ -75,3 +80,99 @@
         <button type="submit" class="btn-guardar">Guardar Asistencia</button>
     </form>
 </main>
+
+@section Scripts {
+    <script src="~/lib/dexie/dist/dexie.min.js"></script>
+    <script src="~/js/offline-asistencia.js" asp-append-version="true"></script>
+    <script>
+        // Frente 7 (PWA offline): si no hay señal al guardar, encola en IndexedDB en vez de
+        // mandar el formulario. Con señal, el comportamiento de siempre no cambia en nada.
+        (function () {
+            var form = document.getElementById('formAsistencia');
+            var maId = @maId;
+            var fecha = '@fecha.ToString("yyyy-MM-dd")';
+
+            function actualizarBannerPendientes(sesionVencida) {
+                if (!window.OfflineAsistencia) return;
+                window.OfflineAsistencia.contarPendientes().then(function (n) {
+                    var banner = document.getElementById('offlinePendientesBanner');
+                    var texto = document.getElementById('offlinePendientesTexto');
+                    var btn = document.getElementById('offlineSincronizarBtn');
+                    if (!banner || !texto) return;
+                    if (n === 0) {
+                        banner.hidden = true;
+                        return;
+                    }
+                    banner.hidden = false;
+                    if (sesionVencida) {
+                        // 7.1.6: nada de lo cargado se pierde — solo hace falta volver a
+                        // loguearse para que el servidor acepte la sincronización de nuevo.
+                        texto.textContent = 'Tu sesión venció mientras estabas sin conexión. ' +
+                            'Iniciá sesión de nuevo — lo que ya cargaste no se perdió, ' +
+                            'queda guardado en este dispositivo (' + n + (n === 1 ? ' pendiente' : ' pendientes') + ').';
+                        if (btn) { btn.textContent = 'Iniciar sesión'; btn.dataset.sesionVencida = 'true'; }
+                    } else {
+                        texto.textContent = n + (n === 1
+                            ? ' asistencia pendiente de sincronizar'
+                            : ' asistencias pendientes de sincronizar');
+                        if (btn) { btn.textContent = 'Sincronizar ahora'; delete btn.dataset.sesionVencida; }
+                    }
+                });
+            }
+
+            window.addEventListener('offline-asistencia:sync', function (e) {
+                actualizarBannerPendientes(e.detail && e.detail.sesionVencida);
+            });
+
+            if (form) {
+                form.addEventListener('submit', function (e) {
+                    if (navigator.onLine || !window.OfflineAsistencia) return; // caso normal, sin cambios
+
+                    e.preventDefault();
+
+                    var filas = [];
+                    form.querySelectorAll('tbody tr').forEach(function (tr) {
+                        var usIdInput = tr.querySelector('input[name$=".UsId"]');
+                        if (!usIdInput) return;
+                        var presenteInput = tr.querySelector('input[name$=".AsPresente"]');
+                        var justificacionInput = tr.querySelector('input[name$=".AsJustificacion"]');
+                        filas.push({
+                            usId: parseInt(usIdInput.value, 10),
+                            presente: !!(presenteInput && presenteInput.checked),
+                            justificacion: !!(justificacionInput && justificacionInput.checked),
+                        });
+                    });
+
+                    if (filas.length === 0) return;
+
+                    window.OfflineAsistencia.encolarAsistencia(maId, fecha, filas).then(function () {
+                        alert('Sin conexión: la asistencia se guardó en este dispositivo y se va a enviar sola cuando vuelva la señal.');
+                        actualizarBannerPendientes();
+                    });
+                });
+            }
+
+            var btnSync = document.getElementById('offlineSincronizarBtn');
+            if (btnSync) {
+                btnSync.addEventListener('click', function () {
+                    // Sesión vencida (7.1.6): reintentar el POST solo repite el mismo 401 —
+                    // hay que loguearse de nuevo primero, la cola espera intacta hasta entonces.
+                    if (btnSync.dataset.sesionVencida === 'true') {
+                        window.location.href = '/Account/Login?ReturnUrl=' + encodeURIComponent(window.location.pathname + window.location.search);
+                        return;
+                    }
+                    if (!window.OfflineAsistencia) return;
+                    btnSync.disabled = true;
+                    // El estado del banner lo actualiza el listener de 'offline-asistencia:sync'
+                    // (dispara siempre, venga de este click o de una sincronización automática);
+                    // acá solo hace falta reactivar el botón al terminar.
+                    window.OfflineAsistencia.sincronizarPendientes().finally(function () {
+                        btnSync.disabled = false;
+                    });
+                });
+            }
+
+            actualizarBannerPendientes();
+        })();
+    </script>
+}

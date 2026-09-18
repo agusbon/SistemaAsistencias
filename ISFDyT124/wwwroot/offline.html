@@ -35,8 +35,21 @@
     <div class="offline-wrap">
         <img src="/images/logo.png" alt="IS 124">
         <h1>Sin conexión</h1>
-        <p>No se pudo cargar esta página porque no hay conexión a internet en este momento. Cuando vuelva la señal, volvé a intentar.</p>
+        <p id="offlineMensaje">No se pudo cargar esta página porque no hay conexión a internet en este momento. Cuando vuelva la señal, volvé a intentar.</p>
         <button onclick="location.reload()">Reintentar</button>
     </div>
+    <script>
+        // El Service Worker responde con este archivo pero la barra de direcciones sigue
+        // mostrando la URL que se pidió de verdad — se usa para dar un mensaje más útil
+        // en el caso puntual de Tomar Asistencia (frente 7 / PWA offline).
+        (function () {
+            if (window.location.pathname.indexOf('/Profesor/Asistencia') !== -1) {
+                document.getElementById('offlineMensaje').textContent =
+                    'Esta cátedra todavía no se guardó en el dispositivo para poder abrirla sin conexión. ' +
+                    'Abrila una vez con wifi o datos (por ejemplo, al llegar al instituto) y va a quedar ' +
+                    'disponible offline la próxima vez.';
+            }
+        })();
+    </script>
 </body>
 </html>

@@ -11,6 +11,10 @@ const APP_SHELL = [
     '/images/icons/icon-512.png',
     '/manifest.json',
     '/offline.html',
+    // Frente 7 (PWA offline): la cola de asistencia necesita Dexie disponible
+    // localmente aunque la primera carga de la pantalla haya sido sin señal.
+    '/lib/dexie/dist/dexie.min.js',
+    '/js/offline-asistencia.js',
 ];
 
 self.addEventListener('install', (event) => {
