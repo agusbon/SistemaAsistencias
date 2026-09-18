@@ -1,6 +1,11 @@
 const CACHE_VERSION = 'is124-v3';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
-const PAGES_CACHE = `${CACHE_VERSION}-pages`;
+// A propósito NO atada a CACHE_VERSION: acá se va acumulando cada pantalla real
+// que el docente visitó con señal. Si la atamos a la versión, cada vez que
+// subimos un cambio de CSS/JS (que solo debería refrescar lo estático) se
+// borraba junto con eso todo el historial de páginas ya guardado, dejando al
+// docente sin nada para ver la próxima vez que abriera la app sin conexión.
+const PAGES_CACHE = 'is124-pages';
 
 const APP_SHELL = [
     '/css/style.css',
@@ -11,6 +16,10 @@ const APP_SHELL = [
     '/images/icons/icon-512.png',
     '/manifest.json',
     '/offline.html',
+    // Pantalla pública (no requiere sesión) — se precachea para que abrir la
+    // app sin señal, incluso en el primerísimo arranque, muestre el login de
+    // verdad en vez del cartel genérico de "sin conexión".
+    '/Account/Login',
     // Frente 7 (PWA offline): la cola de asistencia necesita Dexie disponible
     // localmente aunque la primera carga de la pantalla haya sido sin señal.
     '/lib/dexie/dist/dexie.min.js',
