@@ -39,9 +39,19 @@ namespace ISFDyT124.Controllers
             if (!int.TryParse(docenteIdClaim, out int docenteId))
                 return Unauthorized();
 
+            // Solo cátedras de la cohorte del año en curso — una cátedra de una
+            // cohorte pasada (ej. 2026 cuando ya estamos en 2027) no debe seguir
+            // apareciendo en el panel del docente.
+            int anioActual = DateTime.Today.Year;
+
             var catedras = await _context
                 .Usuarios.Where(u => u.UsId == docenteId)
                 .SelectMany(u => u.CarreraMaterias)
+                .Where(cm =>
+                    cm.CarreraCohorte != null
+                    && cm.CarreraCohorte.Cohorte != null
+                    && cm.CarreraCohorte.Cohorte.CoAnio == anioActual
+                )
                 .Select(cm => new CarreraMateriaDetalleDto
                 {
                     CaMaId = cm.CaMaId,
@@ -225,14 +235,24 @@ namespace ISFDyT124.Controllers
 
         /// <summary>
         /// Verifica que la materia pertenezca a alguna de las cátedras (CarreraMaterias)
-        /// que tiene asignadas el docente, antes de dejarlo ver/editar su asistencia.
+        /// que tiene asignadas el docente EN LA COHORTE DEL AÑO EN CURSO, antes de
+        /// dejarlo ver/editar su asistencia. Una cátedra de una cohorte pasada (ej. el
+        /// docente tenía una carrera de la cohorte 2026 y ya estamos en 2027) no cuenta
+        /// como propia, aunque la relación siga existiendo en la base.
         /// </summary>
         private async Task<bool> EsCatedraDelDocenteAsync(int docenteId, int maId)
         {
+            int anioActual = DateTime.Today.Year;
+
             return await _context
                 .Usuarios.Where(u => u.UsId == docenteId)
                 .SelectMany(u => u.CarreraMaterias)
-                .AnyAsync(cm => cm.MaId == maId);
+                .AnyAsync(cm =>
+                    cm.MaId == maId
+                    && cm.CarreraCohorte != null
+                    && cm.CarreraCohorte.Cohorte != null
+                    && cm.CarreraCohorte.Cohorte.CoAnio == anioActual
+                );
         }
 
         #endregion

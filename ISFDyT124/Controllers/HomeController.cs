@@ -31,9 +31,19 @@ namespace ISFDyT124.Controllers
                 if (!int.TryParse(docenteIdClaim, out int docenteId))
                     return Unauthorized();
 
+                // Solo cátedras de la cohorte del año en curso — una cátedra de una
+                // cohorte pasada (ej. 2026 cuando ya estamos en 2027) no debe seguir
+                // apareciendo para tomar asistencia.
+                int anioActual = DateTime.Today.Year;
+
                 var catedras = await _context
                     .Usuarios.Where(u => u.UsId == docenteId)
                     .SelectMany(u => u.CarreraMaterias)
+                    .Where(cm =>
+                        cm.CarreraCohorte != null
+                        && cm.CarreraCohorte.Cohorte != null
+                        && cm.CarreraCohorte.Cohorte.CoAnio == anioActual
+                    )
                     .Select(cm => new
                     {
                         cm.MaId,
