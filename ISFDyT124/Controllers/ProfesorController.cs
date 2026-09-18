@@ -93,6 +93,16 @@ namespace ISFDyT124.Controllers
 
             int maId = catedra.MaId;
 
+            // El docente solo puede tomar/editar asistencia de sus propias cátedras
+            // asignadas — antes se podía cambiar el caMaId en la URL y ver/editar
+            // la de cualquier otro docente (ticket 6.7, punto 5).
+            var docenteIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!int.TryParse(docenteIdClaim, out int docenteId))
+                return Unauthorized();
+
+            if (!await EsCatedraDelDocenteAsync(docenteId, maId))
+                return NotFound();
+
             ViewBag.CaMaId = caMaId;
             ViewBag.MateriaId = maId;
             ViewBag.Fecha = fechaFiltro;
@@ -162,6 +172,15 @@ namespace ISFDyT124.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
+            // Mismo chequeo que en el GET: no se puede guardar asistencia de una cátedra
+            // que no es propia, aunque se arme el POST a mano (ticket 6.7, punto 5).
+            var docenteIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!int.TryParse(docenteIdClaim, out int docenteId))
+                return Unauthorized();
+
+            if (!await EsCatedraDelDocenteAsync(docenteId, maId))
+                return NotFound();
+
             foreach (var dto in asistencias)
             {
                 if (dto.UsId == null)
@@ -202,6 +221,18 @@ namespace ISFDyT124.Controllers
             await _context.SaveChangesAsync();
             TempData["SuccessMessage"] = "Las asistencias han sido guardadas correctamente.";
             return RedirectToAction(nameof(Index));
+        }
+
+        /// <summary>
+        /// Verifica que la materia pertenezca a alguna de las cátedras (CarreraMaterias)
+        /// que tiene asignadas el docente, antes de dejarlo ver/editar su asistencia.
+        /// </summary>
+        private async Task<bool> EsCatedraDelDocenteAsync(int docenteId, int maId)
+        {
+            return await _context
+                .Usuarios.Where(u => u.UsId == docenteId)
+                .SelectMany(u => u.CarreraMaterias)
+                .AnyAsync(cm => cm.MaId == maId);
         }
 
         #endregion

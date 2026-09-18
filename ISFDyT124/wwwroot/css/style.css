@@ -278,6 +278,33 @@ body {
     box-shadow: 0 0 0 4px rgba(0, 46, 140, 0.1);
 }
 
+.login-card .input-group .password-field {
+    position: relative;
+}
+
+.login-card .input-group .password-field input {
+    padding-right: 46px;
+}
+
+.toggle-password {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: transparent;
+    border: none;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    color: var(--text-muted);
+}
+
+.toggle-password svg {
+    width: 20px;
+    height: 20px;
+}
+
 .btn-submit {
     background-color: var(--primary-color);
     color: white;
