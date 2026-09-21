@@ -70,6 +70,14 @@ namespace ISFDyT124.Models
 
 
 
+        // RECUPERACIÓN DE CONTRASEÑA (ticket 2.2 — en desarrollo por Santiago Casi)
+        // Token para recuperación de contraseña, inicializado como bloqueado.
+        public string? UsTokenRecovery { get; set; } = "tokenbloqueado";
+
+        // Vencimiento del token de arriba — null cuando no hay ninguna recuperación pedida.
+        // Sin esto, un link de recuperación viejo seguiría siendo válido para siempre.
+        public DateTime? UsTokenRecoveryVencimiento { get; set; }
+
         public virtual Rol? Rol { get; set; } = null!; // Relaciónes de Usuario a Rol
         public virtual CarreraCohorte? CarreraCohorte { get; set; }
 
