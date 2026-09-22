@@ -1,6 +1,7 @@
 using ISFDyT124.Data; // Importa el espacio de nombres para el contexto de la base de datos
 using ISFDyT124.Models; // Importa los modelos
 using ISFDyT124.Services; // Importa PasswordService para hashear la contraseña sembrada
+using Microsoft.AspNetCore.HttpOverrides; // Necesario para ForwardedHeadersOptions (deploy detrás del proxy de Railway)
 using Microsoft.EntityFrameworkCore; // Importa Entity Framework Core para acceso a base de datos
 
 //using ISFDyT124.DTOs; // Importa objetos de transferencia de datos
@@ -18,6 +19,13 @@ builder.Services.AddDbContext<InstitutoDbContext>(options =>
 // Aade controladores con vistas para MVC
 builder.Services.AddControllersWithViews();
 
+// El antiforgery clásico espera el token en un campo de formulario HTML
+// (__RequestVerificationToken), pensado para submits normales. La cola offline
+// sincroniza vía fetch() con JSON, así que en vez de eso el token viaja en este
+// header — [ValidateAntiForgeryToken] lo sigue validando igual, solo cambia de dónde
+// lo lee.
+builder.Services.AddAntiforgery(options => options.HeaderName = "X-CSRF-TOKEN");
+
 // Configura la autenticaci�n basada en cookies
 builder
     .Services.AddAuthentication("Cookies") // Define el esquema de autenticaci�n llamado "Cookies"
@@ -27,9 +35,41 @@ builder
         {
             options.LoginPath = "/Account/Login"; // Ruta a la p�gina de login para redirecci�n en caso de no autenticado
             options.LogoutPath = "/Account/Salir"; // Ruta para cerrar sesi�n
-            options.ExpireTimeSpan = TimeSpan.FromMinutes(30); // Tiempo de expiraci�n de la cookie (30 minutos)
+            // 30 días (antes 30 minutos): ahora que la cookie se persiste, este es el tiempo
+            // real que el docente puede estar sin llegar al servidor y seguir logueado. Con 30
+            // minutos, alguien que se logueaba con wifi a la mañana y llegaba al aula sin señal
+            // un par de horas después ya aparecía deslogueado y no podía tomar asistencia.
+            options.ExpireTimeSpan = TimeSpan.FromDays(30);
             options.SlidingExpiration = true; // Renueva el tiempo de expiraci�n al solicitar recursos si el usuario est� activo
             options.AccessDeniedPath = "/Home/Privacy"; // Ruta a la que redirige si el usuario no tiene permisos
+
+            // Sin esto, un fetch() a /api/* con la cookie vencida recibe un 302 a
+            // /Account/Login (HTML) en vez de un 401 — el JS de sincronización no
+            // puede reaccionar bien a eso. Para rutas /api devolvemos el status code
+            // crudo; el resto de la app sigue redirigiendo como siempre.
+            options.Events = new Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationEvents
+            {
+                OnRedirectToLogin = context =>
+                {
+                    if (context.Request.Path.StartsWithSegments("/api"))
+                    {
+                        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                        return Task.CompletedTask;
+                    }
+                    context.Response.Redirect(context.RedirectUri);
+                    return Task.CompletedTask;
+                },
+                OnRedirectToAccessDenied = context =>
+                {
+                    if (context.Request.Path.StartsWithSegments("/api"))
+                    {
+                        context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                        return Task.CompletedTask;
+                    }
+                    context.Response.Redirect(context.RedirectUri);
+                    return Task.CompletedTask;
+                },
+            };
         }
     );
 
@@ -47,6 +87,9 @@ using (var scope = app.Services.CreateScope())
         context.Roles.Add(rolAdmin);
     }
 
+    // Roles del negocio: se busca por RoId (PK fija) y se corrige la denominación si cambió,
+    // en vez de buscar por nombre (que en bases con el seed viejo insertaba una fila duplicada
+    // y rompía el arranque). Denominaciones definitivas: Docente / Estudiante / Dirección.
     var rolDocente = await context.Roles.FindAsync(2);
     if (rolDocente == null)
         context.Roles.Add(new Rol { RoId = 2, RoDenominacion = "Docente" });
@@ -62,37 +105,16 @@ using (var scope = app.Services.CreateScope())
     if (!await context.Roles.AnyAsync(r => r.RoId == 4))
         context.Roles.Add(new Rol { RoId = 4, RoDenominacion = "Dirección" });
 
-    // Puede haber quedado null si el RoId=1 ya estaba ocupado por un rol con otro nombre
-    rolAdmin ??= await context.Roles.FirstOrDefaultAsync(r => r.RoDenominacion == "Admin" || r.RoId == 1);
-
-    const int adminDni = 12345678;
-    const string adminEmail = "admin@instituto.edu.ar";
-
-    // Chequea por cada campo con restricción propia (UsDni es único; UsEmail es el identificador
-    // de negocio del admin sembrado) — si cualquiera de los dos ya existe, no vuelve a insertar.
-    if (rolAdmin != null && !await context.Usuarios.AnyAsync(u => u.UsEmail == adminEmail || u.UsDni == adminDni))
-    {
-        // UsId es ValueGeneratedNever (manual, no IDENTITY) — mismo patrón que AdminController.UsuarioAgregar
-        int nuevoUsId = await context.Usuarios.AnyAsync()
-            ? await context.Usuarios.MaxAsync(u => u.UsId) + 1
-            : 1;
-
-        context.Usuarios.Add(new Usuario
-        {
-            UsId = nuevoUsId,
-            UsNombre = "Admin",
-            UsApellido = "Sistema",
-            UsDni = adminDni,
-            UsEmail = adminEmail,
-            // CAMBIO: la contraseña sembrada para el admin (igual a su DNI, mismo criterio
-            // que un alta manual) se guarda hasheada en vez de en texto plano.
-            UsContrasena = PasswordService.HashPassword("12345678"),
-            RoId = rolAdmin.RoId
-        });
-    }
-
     await context.SaveChangesAsync();
 }
+
+// Railway (y cualquier proxy inverso) termina el HTTPS en su borde y reenvía la request al
+// contenedor por HTTP simple — sin esto, UseHttpsRedirection/UseHsts ven cada request como HTTP
+// y la vuelven a mandar a HTTPS, generando un loop de redirects infinito para el visitante.
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+});
 
 // Configuraciones para ambientes que NO son de desarrollo
 if (!app.Environment.IsDevelopment())

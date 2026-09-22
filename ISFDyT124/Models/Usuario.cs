@@ -49,6 +49,7 @@ namespace ISFDyT124.Models
         //EMAIL
         [Required]
         [EmailAddress(ErrorMessage = "Ingrese una dirección de mail válida")]
+        [MaxLength(254, ErrorMessage = "No se permiten más de 254 caracteres.")] // Límite estándar de longitud para direcciones de email (RFC 5321)
         public string? UsEmail { get; set; }
 
         //CONTRASEÑA
@@ -57,9 +58,7 @@ namespace ISFDyT124.Models
         public string UsContrasena { get; set; }
 
 
-        // Token para recuperación de contraseña, inicializado como bloqueado 
-        public string? UsTokenRecovery { get; set; } = "tokenbloqueado"; 
-        //Esto se modifica en la base de datos
+       
 
 
 
@@ -75,6 +74,14 @@ namespace ISFDyT124.Models
         public int? CaCoId { get; set; }
 
 
+
+        // RECUPERACIÓN DE CONTRASEÑA (ticket 2.2 — en desarrollo por Santiago Casi)
+        // Token para recuperación de contraseña, inicializado como bloqueado.
+        public string? UsTokenRecovery { get; set; } = "tokenbloqueado";
+
+        // Vencimiento del token de arriba — null cuando no hay ninguna recuperación pedida.
+        // Sin esto, un link de recuperación viejo seguiría siendo válido para siempre.
+        public DateTime? UsTokenRecoveryVencimiento { get; set; }
 
         public virtual Rol? Rol { get; set; } = null!; // Relaciónes de Usuario a Rol
         public virtual CarreraCohorte? CarreraCohorte { get; set; }
