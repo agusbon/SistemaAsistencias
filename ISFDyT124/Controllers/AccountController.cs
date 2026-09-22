@@ -18,6 +18,14 @@ namespace ISFDyT124.Controllers
         // BASE DE DATOS: Declaramos la conexión. Mantuve InstitutoDbContext, modificalo si usás SiAsContext.
         private readonly InstitutoDbContext _context;
 
+        // Valor centinela que se guarda en UsTokenRecovery cuando NO hay una recuperación
+        // pendiente: es el default del modelo y también lo que se escribe al consumir un token.
+        private const string TokenBloqueado = "tokenbloqueado";
+
+        // Cuánto vale un enlace de recuperación desde que se emite. Si se cambia,
+        // hay que actualizar también el texto del mail en Sendemail.
+        private const int MinutosVigenciaToken = 30;
+
         public AccountController(InstitutoDbContext context)
         {
             _context = context;
@@ -224,8 +232,10 @@ namespace ISFDyT124.Controllers
             // Genera un token único para la recuperación de contraseña
             var token = Guid.NewGuid().ToString("N");
 
-            // Asigna el token de recuperación al usuario
+            // Asigna el token de recuperación al usuario. Al pisar la columna, cualquier
+            // token anterior de este usuario queda invalidado: hay uno solo vigente por vez.
             usuario.UsTokenRecovery = token;
+            usuario.UsTokenRecoveryVencimiento = DateTime.UtcNow.AddMinutes(MinutosVigenciaToken);
             _context.Entry(usuario).State = EntityState.Modified; // Marca la entidad como modificada
             await _context.SaveChangesAsync(); // Guarda los cambios en la base de datos
 
@@ -237,20 +247,34 @@ namespace ISFDyT124.Controllers
             return RedirectToAction("Login"); // Redirige a la vista de login
         }
 
+        // Devuelve el usuario dueño del token sólo si el token es real y sigue vigente.
+        // null significa cualquiera de estos casos: vino vacío, es el centinela
+        // "tokenbloqueado", no lo tiene nadie, o ya venció. La validación vive acá y no
+        // duplicada en cada acción, para que el GET y el POST no puedan divergir.
+        private async Task<Usuario?> BuscarUsuarioPorTokenVigenteAsync(string? token)
+        {
+            // Sin esto, /Account/Recovery?token=tokenbloqueado matchearía contra el primer
+            // usuario que nunca pidió recuperación o que ya consumió la suya.
+            if (string.IsNullOrWhiteSpace(token) || token == TokenBloqueado)
+                return null;
+
+            var usuario = await _context.Usuarios
+                .FirstOrDefaultAsync(u => u.UsTokenRecovery == token
+                                       && u.UsTokenRecoveryVencimiento != null);
+
+            // El vencimiento se escribe y se compara siempre en UTC.
+            if (usuario is null || usuario.UsTokenRecoveryVencimiento < DateTime.UtcNow)
+                return null;
+
+            return usuario;
+        }
+
         [HttpGet] // Solicitud GET para acceder a la vista de recuperación con un token
         public async Task<IActionResult> Recovery(string token)
         {
-            if (string.IsNullOrEmpty(token)) // Verifica que el token esté presente
-            {
-                TempData["Error"] = "Token no válido."; // Mensaje de error
-                return RedirectToAction("StartRecovery"); // Redirige a inicio de recuperación
-            }
+            var usuario = await BuscarUsuarioPorTokenVigenteAsync(token);
 
-            // Busca en la base de datos un usuario que tenga el token proporcionado
-            var usuario = await _context.Usuarios
-                .FirstOrDefaultAsync(u => u.UsTokenRecovery == token);
-
-            if (usuario == null) // Si no se encontró el usuario o el token es inválido
+            if (usuario is null) // Token ausente, centinela, inexistente o vencido
             {
                 TempData["Error"] = "El enlace de recuperación es inválido o ha expirado."; // Mensaje de error
                 return RedirectToAction("StartRecovery");
@@ -278,19 +302,20 @@ namespace ISFDyT124.Controllers
                 return View(model);
             }
 
-            // Busca al usuario con el token que se usó para la recuperación
-            var usuario = await _context.Usuarios
-                .FirstOrDefaultAsync(u => u.UsTokenRecovery == model.UsTokenRecovery);
+            // Se revalida el token acá y no sólo en el GET: entre que se abrió el formulario
+            // y se envió pudieron pasar horas, y nadie más vuelve a mirar el vencimiento.
+            var usuario = await BuscarUsuarioPorTokenVigenteAsync(model.UsTokenRecovery);
 
-            if (usuario == null) // Si no existe el token o el usuario
+            if (usuario is null) // Token ausente, centinela, inexistente o vencido
             {
-                TempData["Error"] = "Token inválido. Solicite un nuevo enlace de recuperación.";
+                TempData["Error"] = "Token inválido o expirado. Solicite un nuevo enlace de recuperación.";
                 return RedirectToAction("StartRecovery");
             }
 
             // Actualiza la contraseña del usuario con la nueva contraseña hasheada
             usuario.UsContrasena = PasswordService.HashPassword(model.UsContrasena!);
-            usuario.UsTokenRecovery = "tokenbloqueado"; // Marca el token como usado para que no se reutilice
+            usuario.UsTokenRecovery = TokenBloqueado; // Marca el token como usado para que no se reutilice
+            usuario.UsTokenRecoveryVencimiento = null; // Lo saca del universo de tokens vigentes
 
 
             _context.Entry(usuario).State = EntityState.Modified; // Marca entidad modificada
