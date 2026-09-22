@@ -181,7 +181,7 @@ namespace ISFDyT124.Controllers
 
         //Recuperación de contraseña
 
-        [HttpGet] // Indica que este método responde a solicitudes GET (mostrar formulario)
+        [HttpGet] 
         public ActionResult StartRecovery()
         {
             RecoveryViewModel model = new RecoveryViewModel(); // Crea un modelo vacío para el formulario de recuperación
@@ -296,14 +296,14 @@ namespace ISFDyT124.Controllers
 
             // Construcción del mensaje con cuerpo HTML
             var oMailMessage = new MailMessage(
-                            "casisantiagopablo@gmail.com",
+                            "softwareinstituto@gmail.com",
                             EmailDestino,
-                            "Restablecimiento de contraseña – WebTech",
+                            "Restablecimiento de contraseña – Sistema de asistencias - ISFDyT124",
                             $@"
                                 <div style='font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 650px; margin: 0 auto; padding: 20px;'>
                                     <h2 style='color: #004d80;'>Solicitud de restablecimiento de contraseña</h2>
                                     <p>Estimado/a usuario/a:</p>
-                                    <p>Recibimos una solicitud para restablecer la contraseña de su cuenta en el <strong>Plataforma de aprendizaje WebTech.</p>
+                                    <p>Recibimos una solicitud para restablecer la contraseña de su cuenta en el <strong>Sistema de control de asistencias del instituto ISFDyT124</strong>.</p>
                                     <p>Si usted realizó esta solicitud, haga clic en el siguiente enlace para crear una nueva contraseña:</p>
                                     <div style='text-align: center; margin: 25px 0;'>
                                         <a href='{urlEscaped}'
@@ -313,11 +313,11 @@ namespace ISFDyT124.Controllers
                                     </div>
                                     <p>Este enlace es válido por una sola vez y expirará en 30 minutos.</p>
                                     <p><strong>¿No solicitó este cambio?</strong> Si usted no ha solicitado restablecer su contraseña, por favor ignore este mensaje. Su cuenta permanecerá segura.</p>
-                                    <p>Para cualquier duda o asistencia adicional, no dude en contactar al Departamento de Desarrollo de Software del instituto.</p>
+                                    <p>Para cualquier duda o asistencia adicional, no dude en contactar al equipo de soporte técnico.</p>
                                     <hr style='border: 0; border-top: 1px solid #eee; margin: 30px 0;' />
                                     <p style='font-size: 0.9em; color: #666;'>
-                                        Escuela Online gratuita por y para la comunidad de informática<br>
-                                        <em>Formando profesionales desde siempre</em>
+                                        Sistema creado por estudiantes de Tecnicatura Superior en Desarrollo de Software – 2026<br>
+                                        <em>Instituto Superior de Formación Docente y Técnica N.º 124</em>
                                     </p>
                                 </div>"
                             );
@@ -330,7 +330,7 @@ namespace ISFDyT124.Controllers
                 EnableSsl = true,
                 UseDefaultCredentials = false,
                 Port = 587,
-                Credentials = new System.Net.NetworkCredential("casisantiagopablo@gmail.com", "lzohvefhtehybtbb")
+                Credentials = new System.Net.NetworkCredential("softwareinstituto@gmail.com", "bdyfkwgqtxfahslt")
             };
 
             oSmtpClient.Send(oMailMessage); // Enviar el correo

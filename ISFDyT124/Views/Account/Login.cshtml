@@ -19,6 +19,12 @@
 
         <form id="loginForm" method="post" action="/Account/Login">
             @Html.AntiForgeryToken()
+            @if (TempData["MensajeExito"] != null)
+            {
+                <div class="alerta-exito" role="alert">
+                    <div class="alerta-texto">@TempData["MensajeExito"]</div>
+                </div>
+            }
             <!-- Bloque de Validación Mejorado -->
             @if (!ViewData.ModelState.IsValid)
             {
@@ -49,7 +55,7 @@
         </form>
 
         <div class="link-container">
-            <a href="recupero-contraseña.html" class="forgot-password">Olvidé mi contraseña</a>
+            <a asp-controller="Account" asp-action="StartRecovery" class="forgot-password">Olvidé mi contraseña</a>
         </div>
     </div>
 
